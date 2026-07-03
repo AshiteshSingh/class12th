@@ -1,1 +1,0 @@
-Built a web-based scoring application for Class 12 competition in index.html. Features: 8 rows, columns for SINO, CHEST NO, and 5 scoring criteria (10 marks each). Live calculation of Total (out of 50) and Average. Ranking system for top 3 (10, 7, 5 points). Excel export with ExcelJS that highlights SINO and CHEST NO of winners. Data persists in localStorage.

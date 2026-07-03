@@ -1,0 +1,88 @@
+Architecture Plan for: Build a web-based scoring application with the following features:
+1. A table with 8 rows and the fo
+
+This implementation plan outlines a lightweight, client-side scoring application. We will use a reactive data-binding approach in Vanilla JS to ensure the UI stays in sync with the underlying score data.
+
+### 1. Files to Create
+*   `index.html`: The main entry point containing the table structure and CDN links.
+*   `styles.css`: Custom Tailwind overrides and specific styles for rank highlighting.
+*   `app.js`: Core logic for calculations, ranking, and UI updates.
+*   `export.js`: Specialized logic for handling `ExcelJS` workbook generation and styling.
+
+### 2. Key Functions/Classes
+
+#### `app.js`
+*   `state`: A global object or array containing 8 student objects.
+    *   Structure: `{ siNo, chestNo, scores: { pClarity, vMod, conf, impact, delivery }, total, average, rank }`
+*   `init()`: Populates the table rows dynamically and attaches event listeners.
+*   `handleInput(event)`: A delegated event listener that captures changes in numeric inputs.
+*   `calculateResults()`: Iterates through the state to update `total` and `average` for each row.
+*   `determineRanks()`: 
+    *   Sorts a copy of the state by `total` descending.
+    *   Assigns 1st, 2nd, and 3rd place.
+    *   Calculates points (10, 7, 5).
+*   `updateDOM()`: Batch updates the UI (totals, average, and rank badges) to minimize reflows.
+
+#### `export.js`
+*   `generateExcel(data)`: 
+    *   Initializes `ExcelJS.Workbook`.
+    *   Sets up column headers and widths.
+    *   Applies conditional formatting/styling to the top 3 rows (background fills).
+    *   Triggers the browser download.
+
+### 3. Data Flow and Architecture
+1.  **Input Phase**: User enters a score in an `<input type="number">` field.
+2.  **Processing Phase**: The `input` event triggers `calculateResults()`.
+    *   The `state` object for that specific `SI NO` is updated.
+    *   `determineRanks()` is called to re-evaluate the standings of all 8 rows.
+3.  **UI Sync Phase**: `updateDOM()` reflects the new totals and adds CSS classes (e.g., `bg-gold`, `bg-silver`, `bg-bronze`) to the winner rows.
+4.  **Output Phase**: Clicking "Download Excel" passes the current `state` to the `export.js` module.
+
+### 4. Potential Edge Cases and Risks
+*   **Tie-Breaking**: If two students have the same total, the system needs a rule (e.g., share the rank or use a specific column like 'Overall Impact' as a tie-breaker). *Plan: Default to shared ranking if totals are equal.*
+*   **Input Validation**: Users might enter numbers > 10 or negative numbers. 
+    *   *Mitigation*: Use `min="0" max="10"` on inputs and a JS check to clamp values.
+*   **Data Persistence**: Since this is a simple web app, refreshing the page will wipe data.
+    *   *Mitigation*: Implement a simple `localStorage.setItem()` save on every input change.
+*   **Library Load Failure**: If the ExcelJS CDN is down, the export button will fail.
+    *   *Mitigation*: Add a loading check for the global `ExcelJS` object.
+
+### 5. Step-by-Step Implementation Order
+
+#### Step 1: HTML Skeleton
+*   Create the `index.html` with a Tailwind-styled container.
+*   Add a `<table id="scoring-table">` with a `<thead>` matching the 8 requested columns.
+*   Add a `<tbody>` that will be populated via JavaScript.
+*   Include the ExcelJS CDN: `<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>`.
+
+#### Step 2: State Management & Table Generation
+*   In `app.js`, create an array of 8 objects representing the rows.
+*   Write a function to generate the `<tr>` elements. Each score input should have a `data-field` attribute (e.g., `data-field="pClarity"`) and a `data-index` to link it to the state.
+
+#### Step 3: Calculation Logic
+*   Attach a single `input` event listener to the `<tbody>`.
+*   Implement `calculateResults()`:
+    *   Sum the 5 score fields.
+    *   Update the `total` (out of 50) and `average` (total / 5).
+*   Update the text content of the "Total" and "Average" cells in the specific row.
+
+#### Step 4: Ranking & Styling
+*   Implement `determineRanks()`:
+    *   Sort students by total.
+    *   Assign ranks 1, 2, and 3.
+    *   Apply Tailwind classes (`bg-yellow-100`, etc.) to the rows or SI NO cells of the winners.
+*   Display the "Points" earned (10, 7, or 5) in a summary section or a hidden column.
+
+#### Step 5: ExcelJS Integration
+*   Implement the `downloadExcel` button click handler.
+*   Configure `ExcelJS` to:
+    *   Create a worksheet named "Results".
+    *   Iterate through the `state` array to add rows.
+    *   **Styling**: Use `worksheet.getRow(index).fill` to highlight the top 3 rows.
+    *   Set font to bold for headers.
+*   Use `workbook.xlsx.writeBuffer()` and `Blob` to trigger the download.
+
+#### Step 6: Final Polish
+*   Add a "Clear All" button to reset the table.
+*   Ensure all numeric inputs are centered and have appropriate padding for a "dashboard" feel.
+*   Add print-friendly CSS media queries so the table can be printed directly from the browser.

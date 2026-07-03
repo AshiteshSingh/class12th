@@ -1,0 +1,6 @@
+User Request: hi
+Omni-Dev Response: Hello! I'm Omni-Dev, your autonomous coding assistant. I see we're in a directory called `class12excel`. 
+
+It looks like we're starting fresh here—there's just a `.env` file and a `.cognee_data` folder for my memory system. 
+
+How can I help you today? Are we going to be working with Excel files, perhaps for a class project? Just let me know what you'd like to build or automate!

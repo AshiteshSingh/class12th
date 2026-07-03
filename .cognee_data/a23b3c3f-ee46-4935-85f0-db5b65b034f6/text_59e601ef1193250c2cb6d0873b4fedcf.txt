@@ -1,0 +1,11 @@
+User Request: hi
+Omni-Dev Response: Hello again! I've already built the **Class 12 Scoring Website** for you in `index.html`. 
+
+It includes:
+*   **8 Rows** for students.
+*   **5 Scoring Columns** (10 marks each).
+*   **Live Total & Average** calculations.
+*   **Ranking System** (1st, 2nd, 3rd) with automated points (10, 7, 5).
+*   **Excel Download** that highlights the SINO and CHEST NO of the winners.
+
+Did you have a chance to try it out, or would you like me to add any more features to it?

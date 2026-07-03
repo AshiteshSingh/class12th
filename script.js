@@ -134,6 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
             judgeResultsData[judge].forEach(p => {
                 const tr = document.createElement('tr');
                 if (p.rank === 1) tr.classList.add('first-place');
+                if (p.rank === 2) tr.classList.add('second-place');
+                if (p.rank === 3) tr.classList.add('third-place');
                 
                 let rankClass = '';
                 if(p.rank === 1) rankClass = 'rank-1';

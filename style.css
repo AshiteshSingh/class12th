@@ -223,14 +223,30 @@ input[type="number"]:focus, input[type="text"]:focus {
     box-shadow: none;
 }
 
-.rank-1 { color: #fbbf24; font-weight: bold; } /* Gold */
-.rank-2 { color: #94a3b8; font-weight: bold; } /* Silver */
-.rank-3 { color: #b45309; font-weight: bold; } /* Bronze */
+.rank-1 { color: #fbbf24; font-weight: bold; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); } /* Gold */
+.rank-2 { color: #cbd5e1; font-weight: bold; text-shadow: 0 0 8px rgba(203, 213, 225, 0.4); } /* Silver (Brightened) */
+.rank-3 { color: #f97316; font-weight: bold; text-shadow: 0 0 8px rgba(249, 115, 22, 0.4); } /* Bronze (Brightened) */
 
 .first-place {
-    background: rgba(251, 191, 36, 0.15) !important;
+    background: rgba(251, 191, 36, 0.1) !important;
 }
 .first-place td {
     color: #fbbf24;
+    font-weight: 600;
+}
+
+.second-place {
+    background: rgba(203, 213, 225, 0.06) !important;
+}
+.second-place td {
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.third-place {
+    background: rgba(249, 115, 22, 0.06) !important;
+}
+.third-place td {
+    color: #f97316;
     font-weight: 600;
 }

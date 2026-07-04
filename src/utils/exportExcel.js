@@ -6,7 +6,7 @@ const EXCEL_HIGHLIGHTS = {
     3: { fill: 'FFFCA5A5', font: 'FF000000' }  // Red (Light red/pink)
 };
 
-function applyWinnerHighlight(excelRow, rank) {
+function applyWinnerHighlight(excelRow, rank, maxCols = 11) {
     if (EXCEL_HIGHLIGHTS[rank]) {
         const fillStyle = {
             type: 'pattern',
@@ -15,11 +15,12 @@ function applyWinnerHighlight(excelRow, rank) {
         };
         const fontStyle = { bold: true, color: { argb: EXCEL_HIGHLIGHTS[rank].font } };
         
-        // Highlight the entire row (all cells)
-        excelRow.eachCell({ includeEmpty: true }, (cell) => {
+        // Highlight the entire row up to maxCols
+        for (let col = 1; col <= maxCols; col++) {
+            const cell = excelRow.getCell(col);
             cell.fill = fillStyle;
             cell.font = fontStyle;
-        });
+        }
     }
 }
 
@@ -85,7 +86,7 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
             dataRow.getCell(8).value = { formula: `SUM(C${rowIndex}:G${rowIndex})`, result: row.total };
             dataRow.getCell(9).value = { formula: `H${rowIndex}/5`, result: parseFloat(row.average) };
 
-            applyWinnerHighlight(dataRow, row.rank);
+            applyWinnerHighlight(dataRow, row.rank, 11);
         });
 
         // Add borders to all cells from Row 5 onwards
@@ -155,7 +156,7 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         dataRow.getCell(6).value = { formula: `SUM(C${rowIndex}:E${rowIndex})`, result: row.grandTotal };
         dataRow.getCell(7).value = { formula: `F${rowIndex}/3`, result: parseFloat(row.average) };
 
-        applyWinnerHighlight(dataRow, row.rank);
+        applyWinnerHighlight(dataRow, row.rank, 9);
     });
 
     // Add borders to all cells from Row 5 onwards

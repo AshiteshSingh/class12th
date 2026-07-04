@@ -8,18 +8,18 @@ const EXCEL_HIGHLIGHTS = {
 
 function applyWinnerHighlight(excelRow, rank, maxCols = 11) {
     if (EXCEL_HIGHLIGHTS[rank]) {
-        const fillStyle = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: EXCEL_HIGHLIGHTS[rank].fill }
-        };
-        const fontStyle = { bold: true, color: { argb: EXCEL_HIGHLIGHTS[rank].font } };
-        
         // Highlight the entire row up to maxCols
         for (let col = 1; col <= maxCols; col++) {
             const cell = excelRow.getCell(col);
-            cell.fill = fillStyle;
-            cell.font = fontStyle;
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: EXCEL_HIGHLIGHTS[rank].fill }
+            };
+            cell.font = { 
+                bold: true, 
+                color: { argb: EXCEL_HIGHLIGHTS[rank].font } 
+            };
         }
     }
 }

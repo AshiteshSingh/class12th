@@ -2,8 +2,8 @@ import ExcelJS from 'exceljs';
 
 const EXCEL_HIGHLIGHTS = {
     1: { fill: 'FFFFD700', font: 'FF000000' }, // Gold (Yellow)
-    2: { fill: 'FFE2E8F0', font: 'FF000000' }, // Silver (Light gray)
-    3: { fill: 'FFFFE4C4', font: 'FF000000' }  // Bronze (Soft peach/orange)
+    2: { fill: 'FF93C5FD', font: 'FF000000' }, // Blue (Light blue)
+    3: { fill: 'FFFCA5A5', font: 'FF000000' }  // Red (Light red/pink)
 };
 
 function applyWinnerHighlight(excelRow, rank) {
@@ -15,14 +15,11 @@ function applyWinnerHighlight(excelRow, rank) {
         };
         const fontStyle = { bold: true, color: { argb: EXCEL_HIGHLIGHTS[rank].font } };
         
-        // Highlight SINO (Col A) and CHEST NO (Col B)
-        const cellSino = excelRow.getCell(1);
-        const cellChest = excelRow.getCell(2);
-
-        cellSino.fill = fillStyle;
-        cellSino.font = fontStyle;
-        cellChest.fill = fillStyle;
-        cellChest.font = fontStyle;
+        // Highlight the entire row (all cells)
+        excelRow.eachCell({ includeEmpty: true }, (cell) => {
+            cell.fill = fillStyle;
+            cell.font = fontStyle;
+        });
     }
 }
 

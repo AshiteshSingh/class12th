@@ -250,3 +250,47 @@ input[type="number"]:focus, input[type="text"]:focus {
     color: #f97316;
     font-weight: 600;
 }
+
+.event-meta-container {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.meta-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.meta-field label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.meta-field input {
+    width: 100% !important;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    text-align: left !important;
+    transition: all 0.3s ease;
+}
+
+.meta-field input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}

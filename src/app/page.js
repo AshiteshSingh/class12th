@@ -34,6 +34,39 @@ export default function Home() {
     const [eventName, setEventName] = useState('');
     const [categoryName, setCategoryName] = useState('');
 
+    const fillDemoData = () => {
+        setEventName('Declamation Contest');
+        setCategoryName('Senior Group');
+        
+        setJudges(prev => {
+            const next = { ...prev };
+            for (let j = 1; j <= 3; j++) {
+                for (let i = 0; i < NUM_PARTICIPANTS; i++) {
+                    const p = next[j][i];
+                    p.chestNo = `C${i + 1}`;
+                    
+                    // Generate random scores
+                    p.s1 = Math.floor(Math.random() * 6) + 5; // 5 to 10
+                    p.s1Str = String(p.s1);
+                    p.s2 = Math.floor(Math.random() * 6) + 5;
+                    p.s2Str = String(p.s2);
+                    p.s3 = Math.floor(Math.random() * 6) + 5;
+                    p.s3Str = String(p.s3);
+                    p.s4 = Math.floor(Math.random() * 6) + 5;
+                    p.s4Str = String(p.s4);
+                    p.s5 = Math.floor(Math.random() * 6) + 5;
+                    p.s5Str = String(p.s5);
+                    
+                    p.total = p.s1 + p.s2 + p.s3 + p.s4 + p.s5;
+                    p.average = (p.total / 5).toFixed(2);
+                }
+            }
+            return next;
+        });
+        
+        setShowResults(false);
+    };
+
     const handleChestChange = (participantIndex, value) => {
         setJudges(prev => {
             const next = { ...prev };
@@ -139,8 +172,8 @@ export default function Home() {
             </header>
 
             {/* Event Name & Category Inputs */}
-            <div className="event-meta-container">
-                <div className="meta-field">
+            <div className="event-meta-container" style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '2rem' }}>
+                <div className="meta-field" style={{ flex: '1 1 250px' }}>
                     <label htmlFor="eventName">Event Name:</label>
                     <input 
                         type="text" 
@@ -150,7 +183,7 @@ export default function Home() {
                         onChange={(e) => setEventName(e.target.value)}
                     />
                 </div>
-                <div className="meta-field">
+                <div className="meta-field" style={{ flex: '1 1 250px' }}>
                     <label htmlFor="categoryName">Category:</label>
                     <input 
                         type="text" 
@@ -159,6 +192,11 @@ export default function Home() {
                         value={categoryName}
                         onChange={(e) => setCategoryName(e.target.value)}
                     />
+                </div>
+                <div className="meta-field" style={{ flex: '0 0 auto' }}>
+                    <button className="btn secondary" onClick={fillDemoData} style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)', minWidth: '150px' }}>
+                        Fill Demo Data
+                    </button>
                 </div>
             </div>
 

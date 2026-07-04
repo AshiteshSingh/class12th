@@ -1,5 +1,4 @@
 import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
 
 const EXCEL_HIGHLIGHTS = {
     1: { fill: 'FFFFD700', font: 'FF000000' }, // Gold (Yellow)
@@ -178,5 +177,17 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, 'Grand_Finale_Combined_Results.xlsx');
+    
+    if (typeof window !== 'undefined') {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Grand_Finale_Combined_Results.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+    }
 };

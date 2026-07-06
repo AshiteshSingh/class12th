@@ -34,6 +34,18 @@ export default function Home() {
     const [eventName, setEventName] = useState('');
     const [categoryName, setCategoryName] = useState('');
 
+    const clearAllData = () => {
+        setEventName('');
+        setCategoryName('');
+        setJudges({
+            1: JSON.parse(JSON.stringify(initialJudgeState)),
+            2: JSON.parse(JSON.stringify(initialJudgeState)),
+            3: JSON.parse(JSON.stringify(initialJudgeState)),
+        });
+        setCombinedResults([]);
+        setShowResults(false);
+    };
+
     const fillDemoData = () => {
         setEventName('Declamation Contest');
         setCategoryName('Senior Group');
@@ -193,9 +205,12 @@ export default function Home() {
                         onChange={(e) => setCategoryName(e.target.value)}
                     />
                 </div>
-                <div className="meta-field" style={{ flex: '0 0 auto' }}>
+                <div className="meta-field" style={{ flex: '0 0 auto', display: 'flex', gap: '0.75rem' }}>
                     <button className="btn secondary" onClick={fillDemoData} style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)', minWidth: '150px' }}>
                         Fill Demo Data
+                    </button>
+                    <button className="btn secondary" onClick={clearAllData} style={{ background: '#ef4444', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)', minWidth: '120px' }}>
+                        Clear All
                     </button>
                 </div>
             </div>

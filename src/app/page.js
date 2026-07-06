@@ -33,10 +33,12 @@ export default function Home() {
     const [showResults, setShowResults] = useState(false);
     const [eventName, setEventName] = useState('');
     const [categoryName, setCategoryName] = useState('');
+    const [eventType, setEventType] = useState('individual'); // 'individual' or 'group'
 
     const clearAllData = () => {
         setEventName('');
         setCategoryName('');
+        setEventType('individual');
         setJudges({
             1: JSON.parse(JSON.stringify(initialJudgeState)),
             2: JSON.parse(JSON.stringify(initialJudgeState)),
@@ -44,6 +46,13 @@ export default function Home() {
         });
         setCombinedResults([]);
         setShowResults(false);
+    };
+
+    const handleEventTypeChange = (newType) => {
+        setEventType(newType);
+        if (showResults) {
+            calculateResults(newType);
+        }
     };
 
     const fillDemoData = () => {
@@ -109,10 +118,16 @@ export default function Home() {
         });
     };
 
-    const calculateResults = () => {
+    const calculateResults = (type) => {
+        const activeType = (type && typeof type === 'string') ? type : eventType;
+        
         // Deep copy to avoid mutating state directly during calc
         const judgesData = JSON.parse(JSON.stringify(judges));
         const combined = [];
+        
+        const firstPoints = activeType === 'group' ? 20 : 10;
+        const secondPoints = activeType === 'group' ? 15 : 7;
+        const thirdPoints = activeType === 'group' ? 10 : 5;
         
         // 1. Calculate ranks for individual judges
         for (let j = 1; j <= 3; j++) {
@@ -120,9 +135,9 @@ export default function Home() {
             judgesData[j].forEach(p => {
                 const rankIndex = sortedLocal.indexOf(p.total);
                 p.rank = rankIndex + 1;
-                if (p.rank === 1) p.points = 10;
-                else if (p.rank === 2) p.points = 7;
-                else if (p.rank === 3) p.points = 5;
+                if (p.rank === 1) p.points = firstPoints;
+                else if (p.rank === 2) p.points = secondPoints;
+                else if (p.rank === 3) p.points = thirdPoints;
                 else p.points = 0;
             });
         }
@@ -154,9 +169,9 @@ export default function Home() {
             const rankIndex = sortedGrand.indexOf(parseFloat(p.average));
             p.rank = rankIndex + 1;
             
-            if (p.rank === 1) p.points = 10;
-            else if (p.rank === 2) p.points = 7;
-            else if (p.rank === 3) p.points = 5;
+            if (p.rank === 1) p.points = firstPoints;
+            else if (p.rank === 2) p.points = secondPoints;
+            else if (p.rank === 3) p.points = thirdPoints;
             else p.points = 0;
         });
         
@@ -204,6 +219,47 @@ export default function Home() {
                         value={categoryName}
                         onChange={(e) => setCategoryName(e.target.value)}
                     />
+                </div>
+                <div className="meta-field" style={{ flex: '1 1 250px' }}>
+                    <label>Event Type:</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0, 0, 0, 0.2)', padding: '0.25rem', borderRadius: '6px', border: '1px solid var(--border-color)', height: '42px', alignItems: 'center' }}>
+                        <button 
+                            type="button" 
+                            onClick={() => handleEventTypeChange('individual')}
+                            style={{ 
+                                flex: 1, 
+                                height: '100%',
+                                background: eventType === 'individual' ? 'var(--primary-color)' : 'transparent', 
+                                color: eventType === 'individual' ? '#fff' : 'var(--text-muted)', 
+                                border: 'none', 
+                                borderRadius: '4px', 
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                transition: 'all 0.2s ease',
+                                outline: 'none'
+                            }}
+                        >
+                            Individual
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => handleEventTypeChange('group')}
+                            style={{ 
+                                flex: 1, 
+                                height: '100%',
+                                background: eventType === 'group' ? 'var(--primary-color)' : 'transparent', 
+                                color: eventType === 'group' ? '#fff' : 'var(--text-muted)', 
+                                border: 'none', 
+                                borderRadius: '4px', 
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                transition: 'all 0.2s ease',
+                                outline: 'none'
+                            }}
+                        >
+                            Group
+                        </button>
+                    </div>
                 </div>
                 <div className="meta-field" style={{ flex: '0 0 auto', display: 'flex', gap: '0.75rem' }}>
                     <button className="btn secondary" onClick={fillDemoData} style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)', minWidth: '150px' }}>

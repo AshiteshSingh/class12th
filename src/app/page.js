@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import JudgeTable from '../components/JudgeTable';
-import { exportCombinedReport } from '../utils/exportExcel';
+import { exportCombinedReport, exportCombinedSheet } from '../utils/exportExcel';
 
 const NUM_PARTICIPANTS = 8;
 const SCORE_MAX = 10;
@@ -214,6 +214,14 @@ function CategorySelector({ availableCategories, selectedCategories, onToggle })
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function Home() {
     const [activeTab, setActiveTab] = useState('judge1');
+    const [combinedDownloading, setCombinedDownloading] = useState(false);
+
+    // ── Manual Combined state (user-editable, independent of judge sheets) ──────
+    const NUM_MANUAL = 8;
+    const initManualRow = (i) => ({ sino: i + 1, chestNo: '', j1: '', j2: '', j3: '', total: 0, rank: null });
+    const [manualRows, setManualRows] = useState(() => Array.from({ length: NUM_MANUAL }, (_, i) => initManualRow(i)));
+    const [manualRanksCalculated, setManualRanksCalculated] = useState(false);
+    const [autoFilled, setAutoFilled] = useState(false);
     const [judges, setJudges] = useState({
         1: JSON.parse(JSON.stringify(initialJudgeState)),
         2: JSON.parse(JSON.stringify(initialJudgeState)),
@@ -376,6 +384,78 @@ export default function Home() {
         await exportCombinedReport(judges, combinedResults, eventName, categoryName);
     };
 
+    const handleCombinedDownload = async () => {
+        if (!manualRanksCalculated) return;
+        setCombinedDownloading(true);
+        try {
+            await exportCombinedSheet(manualRows, eventName, categoryName);
+        } finally {
+            setCombinedDownloading(false);
+        }
+    };
+
+    // ── Manual Combined helpers ──────────────────────────────────────────────────
+    const applyRanks = (rows) => {
+        const withTotals = rows.map(r => ({
+            ...r,
+            total: (parseFloat(r.j1) || 0) + (parseFloat(r.j2) || 0) + (parseFloat(r.j3) || 0)
+        }));
+        const uniqueTotals = [...new Set(withTotals.map(r => r.total))].sort((a, b) => b - a);
+        return withTotals.map(r => ({ ...r, rank: uniqueTotals.indexOf(r.total) + 1 }));
+    };
+
+    const handleManualChange = (rowIdx, field, value) => {
+        setManualRows(prev => {
+            const next = prev.map((r, i) => i === rowIdx ? { ...r, [field]: value } : r);
+            return applyRanks(next);
+        });
+        setManualRanksCalculated(true);
+        setAutoFilled(false);
+    };
+
+    const calculateManualRanks = () => {
+        setManualRows(prev => applyRanks(prev));
+        setManualRanksCalculated(true);
+    };
+
+    const addManualRow = () => {
+        setManualRows(prev => {
+            const newSino = prev.length + 1;
+            return [...prev, initManualRow(newSino - 1)];
+        });
+        setManualRanksCalculated(false);
+    };
+
+    const removeManualRow = (rowIdx) => {
+        setManualRows(prev => {
+            const next = prev.filter((_, i) => i !== rowIdx).map((r, i) => ({ ...r, sino: i + 1 }));
+            return next;
+        });
+        setManualRanksCalculated(false);
+    };
+
+    const clearManualRows = () => {
+        setManualRows(Array.from({ length: NUM_MANUAL }, (_, i) => initManualRow(i)));
+        setManualRanksCalculated(false);
+        setAutoFilled(false);
+    };
+
+    const autoFillFromJudges = () => {
+        // Pull CH No and per-judge totals from the judge sheets
+        const raw = judges[1].map((p, i) => ({
+            sino: i + 1,
+            chestNo: p.chestNo || '',
+            j1: String(judges[1][i].total),
+            j2: String(judges[2][i].total),
+            j3: String(judges[3][i].total),
+            total: judges[1][i].total + judges[2][i].total + judges[3][i].total,
+            rank: null,
+        }));
+        setManualRows(applyRanks(raw));
+        setManualRanksCalculated(true);
+        setAutoFilled(true);
+    };
+
     const getOrdinal = (n) => {
         const s = ["th", "st", "nd", "rd"];
         const v = n % 100;
@@ -504,6 +584,7 @@ export default function Home() {
                 <button className={`tab-btn ${activeTab === 'judge1' ? 'active' : ''}`} onClick={() => setActiveTab('judge1')}>Judge 1</button>
                 <button className={`tab-btn ${activeTab === 'judge2' ? 'active' : ''}`} onClick={() => setActiveTab('judge2')}>Judge 2</button>
                 <button className={`tab-btn ${activeTab === 'judge3' ? 'active' : ''}`} onClick={() => setActiveTab('judge3')}>Judge 3</button>
+                <button className={`tab-btn combined-btn ${activeTab === 'combined' ? 'active' : ''}`} onClick={() => setActiveTab('combined')}>Combined</button>
                 <button className={`tab-btn results-btn ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>Results</button>
             </nav>
 
@@ -538,6 +619,129 @@ export default function Home() {
                         />
                     </section>
                 )}
+                {activeTab === 'combined' && (
+                    <section className="tab-content active">
+                        <div className="results-section">
+                            <h2>Combined Results
+                                <span style={{
+                                    fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.75rem',
+                                    color: autoFilled ? '#a78bfa' : '#0ea5e9',
+                                    background: autoFilled ? 'rgba(167,139,250,0.12)' : 'rgba(14,165,233,0.12)',
+                                    border: `1px solid ${autoFilled ? 'rgba(167,139,250,0.3)' : 'rgba(14,165,233,0.3)'}`,
+                                    padding: '0.2rem 0.65rem', borderRadius: '20px',
+                                    verticalAlign: 'middle', letterSpacing: '0.03em',
+                                    transition: 'all 0.3s ease',
+                                }}>
+                                    {autoFilled ? '⚡ Auto-filled from Judges' : '✏️ Manual Entry'}
+                                </span>
+                            </h2>
+
+                            {/* Action Bar */}
+                            <div className="action-bar" style={{ flexWrap: 'wrap', gap: '0.6rem' }}>
+                                <button className="btn secondary" onClick={autoFillFromJudges}
+                                    style={{ background: '#7c3aed', boxShadow: '0 4px 15px rgba(124,58,237,0.4)', minWidth: '160px' }}
+                                >
+                                    ⚡ Auto-fill from Judges
+                                </button>
+                                <button className="btn secondary" onClick={addManualRow}
+                                    style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99,102,241,0.4)', minWidth: '120px' }}
+                                >
+                                    + Add Row
+                                </button>
+                                <button className="btn secondary" onClick={clearManualRows}
+                                    style={{ background: '#ef4444', boxShadow: '0 4px 15px rgba(239,68,68,0.4)', minWidth: '100px' }}
+                                >
+                                    Clear
+                                </button>
+                                <button
+                                    className="btn secondary"
+                                    onClick={handleCombinedDownload}
+                                    disabled={!manualRanksCalculated || combinedDownloading}
+                                    style={{ background: '#10b981', boxShadow: '0 4px 15px rgba(16,185,129,0.4)' }}
+                                >
+                                    {combinedDownloading ? 'Downloading…' : '⬇ Download Excel'}
+                                </button>
+                            </div>
+
+                            {/* Editable Table */}
+                            <div className="table-wrapper" style={{ marginTop: '1rem' }}>
+                                <table className="judge-table">
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: '60px' }}>SL No</th>
+                                            <th>CH No</th>
+                                            <th>Judge 1 (50)</th>
+                                            <th>Judge 2 (50)</th>
+                                            <th>Judge 3 (50)</th>
+                                            <th>Total (150)</th>
+                                            <th>Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {manualRows.map((row, idx) => {
+                                            let rowClass = '';
+                                            let rankClass = '';
+                                            if (row.rank === 1) { rowClass = 'first-place'; rankClass = 'rank-1'; }
+                                            else if (row.rank === 2) { rowClass = 'second-place'; rankClass = 'rank-2'; }
+                                            else if (row.rank === 3) { rowClass = 'third-place'; rankClass = 'rank-3'; }
+                                            return (
+                                                <tr key={idx} className={rowClass}>
+                                                    <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{row.sino}</td>
+                                                    <td>
+                                                        <input
+                                                            type="text"
+                                                            className="chest-input"
+                                                            placeholder={`CH ${idx + 1}`}
+                                                            value={row.chestNo}
+                                                            onChange={e => handleManualChange(idx, 'chestNo', e.target.value)}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number" min="0" max="50"
+                                                            className="score-input"
+                                                            placeholder="0"
+                                                            value={row.j1}
+                                                            onChange={e => handleManualChange(idx, 'j1', e.target.value)}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number" min="0" max="50"
+                                                            className="score-input"
+                                                            placeholder="0"
+                                                            value={row.j2}
+                                                            onChange={e => handleManualChange(idx, 'j2', e.target.value)}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number" min="0" max="50"
+                                                            className="score-input"
+                                                            placeholder="0"
+                                                            value={row.j3}
+                                                            onChange={e => handleManualChange(idx, 'j3', e.target.value)}
+                                                        />
+                                                    </td>
+                                                    <td className="total-cell">
+                                                        <strong>{row.total}</strong>
+                                                    </td>
+                                                    <td className={rankClass} style={{ textAlign: 'center', fontWeight: 700, fontSize: '1rem' }}>
+                                                        {row.rank
+                                                            ? <strong>{row.rank}{getOrdinal(row.rank)}</strong>
+                                                            : <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.85rem' }}>—</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
                 {activeTab === 'results' && (
                     <section className="tab-content active">
                         <div className="results-section">

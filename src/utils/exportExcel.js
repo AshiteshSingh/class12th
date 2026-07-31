@@ -189,3 +189,107 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         }, 100);
     }
 };
+
+export const exportCombinedSheet = async (combinedResultsData, eventName, categoryName) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Combined');
+
+    // Header info
+    sheet.getCell('A1').value = 'COMBINED RESULTS';
+    sheet.getCell('A1').font = { name: 'Outfit', size: 14, bold: true };
+
+    sheet.getCell('A2').value = `Event Name: ${eventName || 'N/A'}`;
+    sheet.getCell('A2').font = { name: 'Outfit', size: 11, bold: true };
+
+    sheet.getCell('A3').value = `Category: ${categoryName || 'N/A'}`;
+    sheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
+
+    // Table headers at Row 5
+    const headers = [
+        'SL No', 'CH No',
+        'Judge 1 (50)', 'Judge 2 (50)', 'Judge 3 (50)',
+        'Total (150)', 'Result'
+    ];
+    const headerRow = sheet.getRow(5);
+    headerRow.values = headers;
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF10B981' } // Green
+    };
+    headerRow.alignment = { horizontal: 'center' };
+
+    // Column widths
+    const colWidths = [10, 15, 18, 18, 18, 18, 12];
+    colWidths.forEach((w, idx) => {
+        sheet.getColumn(idx + 1).width = w;
+    });
+
+    // Data rows
+    const ordinalSuffix = (n) => {
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+
+    combinedResultsData.forEach((row, index) => {
+        const rowIndex = index + 6;
+        const dataRow = sheet.getRow(rowIndex);
+
+        // Support both manual (j1/j2/j3) and auto (t1/t2/t3) formats
+        const judge1 = row.j1 !== undefined ? (parseFloat(row.j1) || 0) : row.t1;
+        const judge2 = row.j2 !== undefined ? (parseFloat(row.j2) || 0) : row.t2;
+        const judge3 = row.j3 !== undefined ? (parseFloat(row.j3) || 0) : row.t3;
+        const grandTotal = judge1 + judge2 + judge3;
+
+        dataRow.values = [
+            row.sino,
+            row.chestNo,
+            judge1,
+            judge2,
+            judge3,
+            '', // Total via formula
+            row.rank ? `${row.rank}${ordinalSuffix(row.rank)}` : ''
+        ];
+        dataRow.alignment = { horizontal: 'center' };
+
+        // Total formula: sum of C+D+E
+        dataRow.getCell(6).value = {
+            formula: `SUM(C${rowIndex}:E${rowIndex})`,
+            result: grandTotal
+        };
+
+        applyWinnerHighlight(dataRow, row.rank, 7);
+    });
+
+    // Borders from Row 5
+    sheet.eachRow((row, rowNum) => {
+        if (rowNum >= 5) {
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+        }
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    if (typeof window !== 'undefined') {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Combined_Results_${eventName || 'Event'}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+    }
+};

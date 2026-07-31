@@ -217,8 +217,8 @@ export default function Home() {
     const [combinedDownloading, setCombinedDownloading] = useState(false);
 
     // ── Manual Combined state (user-editable, independent of judge sheets) ──────
-    const NUM_MANUAL = 8;
-    const initManualRow = (i) => ({ sino: i + 1, chestNo: '', j1: '', j2: '', j3: '', total: 0, rank: null });
+    const NUM_MANUAL = 16;
+    const initManualRow = (i) => ({ sino: '', chestNo: '', j1: '', j2: '', j3: '', total: 0, rank: null });
     const [manualRows, setManualRows] = useState(() => Array.from({ length: NUM_MANUAL }, (_, i) => initManualRow(i)));
     const [manualRanksCalculated, setManualRanksCalculated] = useState(false);
     const [autoFilled, setAutoFilled] = useState(false);
@@ -419,18 +419,12 @@ export default function Home() {
     };
 
     const addManualRow = () => {
-        setManualRows(prev => {
-            const newSino = prev.length + 1;
-            return [...prev, initManualRow(newSino - 1)];
-        });
+        setManualRows(prev => [...prev, initManualRow(prev.length)]);
         setManualRanksCalculated(false);
     };
 
     const removeManualRow = (rowIdx) => {
-        setManualRows(prev => {
-            const next = prev.filter((_, i) => i !== rowIdx).map((r, i) => ({ ...r, sino: i + 1 }));
-            return next;
-        });
+        setManualRows(prev => prev.filter((_, i) => i !== rowIdx));
         setManualRanksCalculated(false);
     };
 
@@ -443,7 +437,7 @@ export default function Home() {
     const autoFillFromJudges = () => {
         // Pull CH No and per-judge totals from the judge sheets
         const raw = judges[1].map((p, i) => ({
-            sino: i + 1,
+            sino: String(i + 1),
             chestNo: p.chestNo || '',
             j1: String(judges[1][i].total),
             j2: String(judges[2][i].total),
@@ -686,7 +680,16 @@ export default function Home() {
                                             else if (row.rank === 3) { rowClass = 'third-place'; rankClass = 'rank-3'; }
                                             return (
                                                 <tr key={idx} className={rowClass}>
-                                                    <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{row.sino}</td>
+                                                    <td>
+                                                        <input
+                                                            type="text"
+                                                            className="chest-input"
+                                                            placeholder={`${idx + 1}`}
+                                                            value={row.sino}
+                                                            onChange={e => handleManualChange(idx, 'sino', e.target.value)}
+                                                            style={{ width: '56px', textAlign: 'center' }}
+                                                        />
+                                                    </td>
                                                     <td>
                                                         <input
                                                             type="text"

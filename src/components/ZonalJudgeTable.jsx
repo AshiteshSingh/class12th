@@ -1,9 +1,42 @@
 'use client';
 
-export default function ZonalJudgeTable({ judgeId, participants, onScoreChange, onChestChange, onNameClick }) {
+export default function ZonalJudgeTable({ judgeId, participants, onScoreChange, onChestChange, onNameClick, onSortByChestNo }) {
     return (
         <div className="table-wrapper">
-            <h2>Judge {judgeId} Scores</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <h2 style={{ margin: 0 }}>Judge {judgeId} Scores</h2>
+                {onSortByChestNo && (
+                    <button
+                        type="button"
+                        onClick={onSortByChestNo}
+                        style={{
+                            background: 'rgba(59, 130, 246, 0.15)',
+                            color: '#60a5fa',
+                            border: '1px solid rgba(59, 130, 246, 0.35)',
+                            padding: '0.45rem 1rem',
+                            borderRadius: '8px',
+                            fontWeight: 600,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 2px 10px rgba(59, 130, 246, 0.2)'
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = 'var(--primary-color)';
+                            e.currentTarget.style.color = '#fff';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)';
+                            e.currentTarget.style.color = '#60a5fa';
+                        }}
+                    >
+                        🔢 Sort by Chest No (1 → 13)
+                    </button>
+                )}
+            </div>
             <table className="judge-table" data-judge={judgeId}>
                 <thead>
                     <tr>

@@ -66,6 +66,13 @@ const initialJudgeState = Array.from({ length: NUM_PARTICIPANTS }, (_, i) => ({
     points: 0
 }));
 
+// Helper to extract integer value from chest number strings ("C1" -> 1, "Chest 5" -> 5)
+const parseChestNumber = (chestStr) => {
+    if (!chestStr) return Infinity;
+    const match = String(chestStr).match(/\d+/);
+    return match ? parseInt(match[0], 10) : Infinity;
+};
+
 // ─── Event Dropdown ────────────────────────────────────────────────────────────
 function EventDropdown({ value, onChange }) {
     const [open, setOpen] = useState(false);
@@ -276,6 +283,56 @@ export default function ZonalPage() {
                 return next;
             });
         }
+    };
+
+    // ── Ascending Sort by Chest Number ──────────────────────────────────────────
+    const sortByChestNumber = () => {
+        setJudges(prev => {
+            // Build index array sorted by chest number extracted from Judge 1
+            const indices = Array.from({ length: NUM_PARTICIPANTS }, (_, i) => i);
+            indices.sort((a, b) => {
+                const chestA = parseChestNumber(prev[1][a].chestNo);
+                const chestB = parseChestNumber(prev[1][b].chestNo);
+                if (chestA !== chestB) return chestA - chestB;
+                return a - b;
+            });
+
+            const next = { 1: [], 2: [], 3: [] };
+            for (let j = 1; j <= 3; j++) {
+                indices.forEach((origIdx, newIdx) => {
+                    const row = { ...prev[j][origIdx], sino: newIdx + 1 };
+                    next[j].push(row);
+                });
+            }
+            return next;
+        });
+
+        // Also sort manual combined rows by chest number
+        setManualRows(prev => {
+            const sorted = [...prev].sort((a, b) => {
+                const chestA = parseChestNumber(a.chestNo);
+                const chestB = parseChestNumber(b.chestNo);
+                return chestA - chestB;
+            }).map((row, idx) => ({ ...row, sino: String(idx + 1) }));
+            return applyRanks(sorted);
+        });
+
+        if (showResults) {
+            calculateResults();
+        }
+    };
+
+    // ── Auto-Assign Chest Nos C1..C13 ──────────────────────────────────────────
+    const autoAssignChestNos = () => {
+        setJudges(prev => {
+            const next = { ...prev };
+            for (let j = 1; j <= 3; j++) {
+                for (let i = 0; i < NUM_PARTICIPANTS; i++) {
+                    next[j][i].chestNo = `C${i + 1}`;
+                }
+            }
+            return next;
+        });
     };
 
     const clearAllData = () => {
@@ -587,18 +644,32 @@ export default function ZonalPage() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="meta-field" style={{ flex: '0 0 auto', display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+                <div className="meta-field" style={{ flex: '0 0 auto', display: 'flex', gap: '0.6rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <button
+                        className="btn secondary"
+                        onClick={sortByChestNumber}
+                        style={{ background: '#3b82f6', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', minWidth: '150px' }}
+                    >
+                        🔢 Sort by Chest No
+                    </button>
+                    <button
+                        className="btn secondary"
+                        onClick={autoAssignChestNos}
+                        style={{ background: '#059669', boxShadow: '0 4px 15px rgba(5,150,105,0.4)', minWidth: '150px' }}
+                    >
+                        ⚡ Auto C1..C13
+                    </button>
                     <button
                         className="btn secondary"
                         onClick={fillDemoData}
-                        style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99,102,241,0.4)', minWidth: '140px' }}
+                        style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99,102,241,0.4)', minWidth: '130px' }}
                     >
-                        Fill Demo Data
+                        Fill Demo
                     </button>
                     <button
                         className="btn secondary"
                         onClick={clearAllData}
-                        style={{ background: '#ef4444', boxShadow: '0 4px 15px rgba(239,68,68,0.4)', minWidth: '110px' }}
+                        style={{ background: '#ef4444', boxShadow: '0 4px 15px rgba(239,68,68,0.4)', minWidth: '100px' }}
                     >
                         Clear All
                     </button>
@@ -646,6 +717,7 @@ export default function ZonalPage() {
                             onScoreChange={(idx, field, val) => handleScoreChange(1, idx, field, val)}
                             onChestChange={handleChestChange}
                             onNameClick={handleOpenModal}
+                            onSortByChestNo={sortByChestNumber}
                         />
                     </section>
                 )}
@@ -657,6 +729,7 @@ export default function ZonalPage() {
                             onScoreChange={(idx, field, val) => handleScoreChange(2, idx, field, val)}
                             onChestChange={handleChestChange}
                             onNameClick={handleOpenModal}
+                            onSortByChestNo={sortByChestNumber}
                         />
                     </section>
                 )}
@@ -668,6 +741,7 @@ export default function ZonalPage() {
                             onScoreChange={(idx, field, val) => handleScoreChange(3, idx, field, val)}
                             onChestChange={handleChestChange}
                             onNameClick={handleOpenModal}
+                            onSortByChestNo={sortByChestNumber}
                         />
                     </section>
                 )}
@@ -693,6 +767,11 @@ export default function ZonalPage() {
                                     style={{ background: '#7c3aed', boxShadow: '0 4px 15px rgba(124,58,237,0.4)', minWidth: '160px' }}
                                 >
                                     ⚡ Auto-fill from Judges
+                                </button>
+                                <button className="btn secondary" onClick={sortByChestNumber}
+                                    style={{ background: '#3b82f6', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', minWidth: '150px' }}
+                                >
+                                    🔢 Sort by Chest No
                                 </button>
                                 <button className="btn secondary" onClick={addManualRow}
                                     style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99,102,241,0.4)', minWidth: '120px' }}

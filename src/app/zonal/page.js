@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import JudgeTable from '../components/JudgeTable';
-import { exportCombinedReport, exportCombinedSheet } from '../utils/exportExcel';
+import ZonalJudgeTable from '../../components/ZonalJudgeTable';
+import ParticipantModal from '../../components/ParticipantModal';
+import { exportCombinedReport, exportCombinedSheet } from '../../utils/exportExcel';
+import { ALL_ZONAL_PARTICIPANTS } from '../../utils/participants';
 
-const NUM_PARTICIPANTS = 8;
+const NUM_PARTICIPANTS = 13;
 const SCORE_MAX = 10;
 
 // ─── Competition Data ──────────────────────────────────────────────────────────
@@ -51,6 +53,7 @@ const COMPETITIONS = [
 
 const initialJudgeState = Array.from({ length: NUM_PARTICIPANTS }, (_, i) => ({
     sino: i + 1,
+    participantName: '',
     chestNo: '',
     s1: 0, s1Str: '',
     s2: 0, s2Str: '',
@@ -212,17 +215,22 @@ function CategorySelector({ availableCategories, selectedCategories, onToggle })
     );
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
-export default function Home() {
+// ─── Main Zonal Page ───────────────────────────────────────────────────────────
+export default function ZonalPage() {
     const [activeTab, setActiveTab] = useState('judge1');
     const [combinedDownloading, setCombinedDownloading] = useState(false);
 
-    // ── Manual Combined state (user-editable, independent of judge sheets) ──────
-    const NUM_MANUAL = 16;
-    const initManualRow = (i) => ({ sino: '', chestNo: '', j1: '', j2: '', j3: '', total: 0, rank: null });
+    // Modal state for selecting participant names
+    const [modalOpen, setModalOpen] = useState(false);
+    const [activeRowIndex, setActiveRowIndex] = useState(null);
+
+    // Manual Combined state
+    const NUM_MANUAL = 13;
+    const initManualRow = (i) => ({ sino: String(i + 1), participantName: '', chestNo: '', j1: '', j2: '', j3: '', total: 0, rank: null });
     const [manualRows, setManualRows] = useState(() => Array.from({ length: NUM_MANUAL }, (_, i) => initManualRow(i)));
     const [manualRanksCalculated, setManualRanksCalculated] = useState(false);
     const [autoFilled, setAutoFilled] = useState(false);
+
     const [judges, setJudges] = useState({
         1: JSON.parse(JSON.stringify(initialJudgeState)),
         2: JSON.parse(JSON.stringify(initialJudgeState)),
@@ -236,13 +244,14 @@ export default function Home() {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [eventType, setEventType] = useState('individual');
 
-    // Derived category string used for display and export
     const categoryName = selectedCategories.join(', ');
+
+    // Collect all assigned participant names across judges for badge feedback
+    const assignedNames = judges[1].map(p => p.participantName).filter(Boolean);
 
     const handleEventSelect = (name, cats) => {
         setEventName(name);
         setAvailableCategories(cats);
-        // Auto-select if only one option, otherwise clear
         setSelectedCategories(cats.length === 1 ? [...cats] : []);
     };
 
@@ -250,6 +259,23 @@ export default function Home() {
         setSelectedCategories(prev =>
             prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
         );
+    };
+
+    const handleOpenModal = (index) => {
+        setActiveRowIndex(index);
+        setModalOpen(true);
+    };
+
+    const handleSelectParticipant = (name) => {
+        if (activeRowIndex !== null) {
+            setJudges(prev => {
+                const next = { ...prev };
+                next[1][activeRowIndex].participantName = name;
+                next[2][activeRowIndex].participantName = name;
+                next[3][activeRowIndex].participantName = name;
+                return next;
+            });
+        }
     };
 
     const clearAllData = () => {
@@ -264,6 +290,9 @@ export default function Home() {
         });
         setCombinedResults([]);
         setShowResults(false);
+        setManualRows(Array.from({ length: NUM_MANUAL }, (_, i) => initManualRow(i)));
+        setManualRanksCalculated(false);
+        setAutoFilled(false);
     };
 
     const handleEventTypeChange = (newType) => {
@@ -274,25 +303,28 @@ export default function Home() {
     };
 
     const fillDemoData = () => {
-        setEventName('Declamation');
+        setEventName('ASISC Zonal Story Telling');
         setAvailableCategories(['Sub-Junior', 'Junior', 'Senior']);
         setSelectedCategories(['Senior']);
 
         setJudges(prev => {
             const next = { ...prev };
+            const sampleParticipants = ALL_ZONAL_PARTICIPANTS.filter(p => p.categoryShort === 'Senior').slice(0, NUM_PARTICIPANTS);
+
             for (let j = 1; j <= 3; j++) {
                 for (let i = 0; i < NUM_PARTICIPANTS; i++) {
                     const p = next[j][i];
-                    p.chestNo = `C${i + 1}`;
-                    p.s1 = Math.floor(Math.random() * 6) + 5;
+                    p.participantName = sampleParticipants[i] ? sampleParticipants[i].name : `Student ${i + 1}`;
+                    p.chestNo = `C${101 + i}`;
+                    p.s1 = Math.floor(Math.random() * 5) + 6;
                     p.s1Str = String(p.s1);
-                    p.s2 = Math.floor(Math.random() * 6) + 5;
+                    p.s2 = Math.floor(Math.random() * 5) + 6;
                     p.s2Str = String(p.s2);
-                    p.s3 = Math.floor(Math.random() * 6) + 5;
+                    p.s3 = Math.floor(Math.random() * 5) + 6;
                     p.s3Str = String(p.s3);
-                    p.s4 = Math.floor(Math.random() * 6) + 5;
+                    p.s4 = Math.floor(Math.random() * 5) + 6;
                     p.s4Str = String(p.s4);
-                    p.s5 = Math.floor(Math.random() * 6) + 5;
+                    p.s5 = Math.floor(Math.random() * 5) + 6;
                     p.s5Str = String(p.s5);
                     p.total = p.s1 + p.s2 + p.s3 + p.s4 + p.s5;
                     p.average = (p.total / 5).toFixed(2);
@@ -353,14 +385,15 @@ export default function Home() {
         }
 
         for (let i = 0; i < NUM_PARTICIPANTS; i++) {
-            const chestNo = judgesData[1][i].chestNo || `Participant ${i + 1}`;
+            const participantName = judgesData[1][i].participantName || `Student ${i + 1}`;
+            const chestNo = judgesData[1][i].chestNo || `C${i + 1}`;
             const t1 = judgesData[1][i].total;
             const t2 = judgesData[2][i].total;
             const t3 = judgesData[3][i].total;
             const grandTotal = t1 + t2 + t3;
             const average = grandTotal / 3;
             combined.push({
-                sino: i + 1, chestNo, t1, t2, t3, grandTotal,
+                sino: i + 1, participantName, chestNo, t1, t2, t3, grandTotal,
                 average: average.toFixed(2), rank: null, points: 0
             });
         }
@@ -382,14 +415,14 @@ export default function Home() {
 
     const handleExport = async () => {
         if (!showResults) return;
-        await exportCombinedReport(judges, combinedResults, eventName, categoryName);
+        await exportCombinedReport(judges, combinedResults, eventName, categoryName, true);
     };
 
     const handleCombinedDownload = async () => {
         if (!manualRanksCalculated) return;
         setCombinedDownloading(true);
         try {
-            await exportCombinedSheet(manualRows, eventName, categoryName);
+            await exportCombinedSheet(manualRows, eventName, categoryName, true);
         } finally {
             setCombinedDownloading(false);
         }
@@ -414,18 +447,8 @@ export default function Home() {
         setAutoFilled(false);
     };
 
-    const calculateManualRanks = () => {
-        setManualRows(prev => applyRanks(prev));
-        setManualRanksCalculated(true);
-    };
-
     const addManualRow = () => {
         setManualRows(prev => [...prev, initManualRow(prev.length)]);
-        setManualRanksCalculated(false);
-    };
-
-    const removeManualRow = (rowIdx) => {
-        setManualRows(prev => prev.filter((_, i) => i !== rowIdx));
         setManualRanksCalculated(false);
     };
 
@@ -436,9 +459,9 @@ export default function Home() {
     };
 
     const autoFillFromJudges = () => {
-        // Pull CH No and per-judge totals from the judge sheets
         const raw = judges[1].map((p, i) => ({
             sino: String(i + 1),
+            participantName: p.participantName || '',
             chestNo: p.chestNo || '',
             j1: String(judges[1][i].total),
             j2: String(judges[2][i].total),
@@ -466,22 +489,6 @@ export default function Home() {
                     style={{
                         padding: '0.6rem 1.4rem',
                         borderRadius: '10px',
-                        background: 'var(--primary-color)',
-                        border: 'none',
-                        color: '#fff',
-                        textDecoration: 'none',
-                        fontWeight: 700,
-                        fontSize: '0.92rem',
-                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
-                    }}
-                >
-                    🏆 Grand Finale System
-                </Link>
-                <Link
-                    href="/zonal"
-                    style={{
-                        padding: '0.6rem 1.4rem',
-                        borderRadius: '10px',
                         background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid var(--border-color)',
                         color: 'var(--text-muted)',
@@ -491,18 +498,33 @@ export default function Home() {
                         transition: 'all 0.3s'
                     }}
                 >
+                    🏆 Grand Finale System
+                </Link>
+                <Link
+                    href="/zonal"
+                    style={{
+                        padding: '0.6rem 1.4rem',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        border: 'none',
+                        color: '#fff',
+                        textDecoration: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.92rem',
+                        boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
+                    }}
+                >
                     🌟 ASISC Zonal System
                 </Link>
             </div>
 
             <header>
-                <h1>Grand Finale Judging System</h1>
-                <p>Score participants across 5 categories</p>
+                <h1>ASISC Zonal Judging System</h1>
+                <p>Interactive participant selection and scoring for ASISC Zonal Competitions</p>
             </header>
 
             {/* ── Event Meta Bar ── */}
             <div className="event-meta-container" style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
-
                 {/* Event Dropdown */}
                 <div className="meta-field" style={{ flex: '1 1 220px' }}>
                     <label>Event Name:</label>
@@ -514,11 +536,7 @@ export default function Home() {
                     <label>
                         Category:
                         {availableCategories.length > 1 && (
-                            <span style={{
-                                marginLeft: '0.5rem', fontSize: '0.73rem',
-                                color: '#7c3aed', fontWeight: 400,
-                                textTransform: 'none', letterSpacing: 0,
-                            }}>
+                            <span style={{ marginLeft: '0.5rem', fontSize: '0.73rem', color: '#7c3aed', fontWeight: 400 }}>
                                 (select one or more)
                             </span>
                         )}
@@ -622,38 +640,41 @@ export default function Home() {
             <main className="content">
                 {activeTab === 'judge1' && (
                     <section className="tab-content active">
-                        <JudgeTable
+                        <ZonalJudgeTable
                             judgeId={1}
                             participants={judges[1]}
                             onScoreChange={(idx, field, val) => handleScoreChange(1, idx, field, val)}
                             onChestChange={handleChestChange}
+                            onNameClick={handleOpenModal}
                         />
                     </section>
                 )}
                 {activeTab === 'judge2' && (
                     <section className="tab-content active">
-                        <JudgeTable
+                        <ZonalJudgeTable
                             judgeId={2}
                             participants={judges[2]}
                             onScoreChange={(idx, field, val) => handleScoreChange(2, idx, field, val)}
                             onChestChange={handleChestChange}
+                            onNameClick={handleOpenModal}
                         />
                     </section>
                 )}
                 {activeTab === 'judge3' && (
                     <section className="tab-content active">
-                        <JudgeTable
+                        <ZonalJudgeTable
                             judgeId={3}
                             participants={judges[3]}
                             onScoreChange={(idx, field, val) => handleScoreChange(3, idx, field, val)}
                             onChestChange={handleChestChange}
+                            onNameClick={handleOpenModal}
                         />
                     </section>
                 )}
                 {activeTab === 'combined' && (
                     <section className="tab-content active">
                         <div className="results-section">
-                            <h2>Combined Results
+                            <h2>Zonal Combined Results
                                 <span style={{
                                     fontSize: '0.75rem', fontWeight: 400, marginLeft: '0.75rem',
                                     color: autoFilled ? '#a78bfa' : '#0ea5e9',
@@ -667,7 +688,6 @@ export default function Home() {
                                 </span>
                             </h2>
 
-                            {/* Action Bar */}
                             <div className="action-bar" style={{ flexWrap: 'wrap', gap: '0.6rem' }}>
                                 <button className="btn secondary" onClick={autoFillFromJudges}
                                     style={{ background: '#7c3aed', boxShadow: '0 4px 15px rgba(124,58,237,0.4)', minWidth: '160px' }}
@@ -694,13 +714,13 @@ export default function Home() {
                                 </button>
                             </div>
 
-                            {/* Editable Table */}
                             <div className="table-wrapper" style={{ marginTop: '1rem' }}>
                                 <table className="judge-table">
                                     <thead>
                                         <tr>
                                             <th style={{ width: '60px' }}>SL No</th>
-                                            <th>CH No</th>
+                                            <th style={{ width: '220px' }}>Participant Name</th>
+                                            <th style={{ width: '110px' }}>CH No</th>
                                             <th>Judge 1 (50)</th>
                                             <th>Judge 2 (50)</th>
                                             <th>Judge 3 (50)</th>
@@ -731,9 +751,20 @@ export default function Home() {
                                                         <input
                                                             type="text"
                                                             className="chest-input"
+                                                            placeholder="Participant Name"
+                                                            value={row.participantName || ''}
+                                                            onChange={e => handleManualChange(idx, 'participantName', e.target.value)}
+                                                            style={{ width: '100%', textAlign: 'left' }}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="text"
+                                                            className="chest-input"
                                                             placeholder={`CH ${idx + 1}`}
                                                             value={row.chestNo}
                                                             onChange={e => handleManualChange(idx, 'chestNo', e.target.value)}
+                                                            style={{ width: '100%' }}
                                                         />
                                                     </td>
                                                     <td>
@@ -785,7 +816,7 @@ export default function Home() {
                 {activeTab === 'results' && (
                     <section className="tab-content active">
                         <div className="results-section">
-                            <h2>Grand Leaderboard</h2>
+                            <h2>Zonal Grand Leaderboard</h2>
                             <div className="action-bar">
                                 <button className="btn primary" onClick={calculateResults}>Calculate Final Results</button>
                                 <button className="btn secondary" onClick={handleExport} disabled={!showResults}>Download Combined Excel</button>
@@ -797,6 +828,7 @@ export default function Home() {
                                         <thead>
                                             <tr>
                                                 <th>SI NO</th>
+                                                <th>PARTICIPANT NAME</th>
                                                 <th>CHEST NO</th>
                                                 <th>Judge 1 Total</th>
                                                 <th>Judge 2 Total</th>
@@ -817,6 +849,7 @@ export default function Home() {
                                                 return (
                                                     <tr key={idx} className={rowClass}>
                                                         <td>{p.sino}</td>
+                                                        <td style={{ fontWeight: 600, textAlign: 'left' }}>{p.participantName}</td>
                                                         <td>{p.chestNo}</td>
                                                         <td>{p.t1}</td>
                                                         <td>{p.t2}</td>
@@ -836,6 +869,15 @@ export default function Home() {
                     </section>
                 )}
             </main>
+
+            {/* Participant Selection Modal */}
+            <ParticipantModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                onSelect={handleSelectParticipant}
+                currentName={activeRowIndex !== null ? judges[1][activeRowIndex]?.participantName : ''}
+                assignedNames={assignedNames}
+            />
         </div>
     );
 }

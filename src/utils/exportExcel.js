@@ -8,7 +8,6 @@ const EXCEL_HIGHLIGHTS = {
 
 function applyWinnerHighlight(excelRow, rank, maxCols = 11) {
     if (EXCEL_HIGHLIGHTS[rank]) {
-        // Highlight the entire row up to maxCols
         for (let col = 1; col <= maxCols; col++) {
             const cell = excelRow.getCell(col);
             cell.fill = {
@@ -24,15 +23,15 @@ function applyWinnerHighlight(excelRow, rank, maxCols = 11) {
     }
 }
 
-export const exportCombinedReport = async (judgesData, combinedResultsData, eventName, categoryName) => {
+export const exportCombinedReport = async (judgesData, combinedResultsData, eventName, categoryName, isZonal = false) => {
     const workbook = new ExcelJS.Workbook();
+    const systemTitle = isZonal ? 'ASISC ZONAL JUDGING SYSTEM' : 'GRAND FINALE JUDGING SYSTEM';
 
     // 1. Generate Judge Sheets
     for (let j = 1; j <= 3; j++) {
         const sheet = workbook.addWorksheet(`Judge ${j}`);
 
-        // Add Event & Category Info at the Top
-        sheet.getCell('A1').value = `JUDGING SHEET - JUDGE ${j}`;
+        sheet.getCell('A1').value = `${systemTitle} - JUDGE ${j}`;
         sheet.getCell('A1').font = { name: 'Outfit', size: 14, bold: true };
         
         sheet.getCell('A2').value = `Event Name: ${eventName || 'N/A'}`;
@@ -41,13 +40,10 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         sheet.getCell('A3').value = `Category: ${categoryName || 'N/A'}`;
         sheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
-        // Table headers at Row 5
-        const headers = [
-            'SI NO', 'CHEST NO', 
-            'Pronunciation Clarity (10)', 'Voice Modulation (10)', 'Confidence (10)', 
-            'Overall Impact (10)', 'Effectiveness (10)', 
-            'Total (50)', 'Average (10)', 'Rank', 'Points'
-        ];
+        const headers = isZonal
+            ? ['SI NO', 'PARTICIPANT NAME', 'CHEST NO', 'Pronunciation Clarity (10)', 'Voice Modulation (10)', 'Confidence (10)', 'Overall Impact (10)', 'Effectiveness (10)', 'Total (50)', 'Average (10)', 'Rank', 'Points']
+            : ['SI NO', 'CHEST NO', 'Pronunciation Clarity (10)', 'Voice Modulation (10)', 'Confidence (10)', 'Overall Impact (10)', 'Effectiveness (10)', 'Total (50)', 'Average (10)', 'Rank', 'Points'];
+
         const headerRow = sheet.getRow(5);
         headerRow.values = headers;
         headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -58,46 +54,53 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         };
         headerRow.alignment = { horizontal: 'center' };
 
-        // Define column widths manually
-        const colWidths = [10, 15, 25, 25, 20, 25, 20, 15, 15, 10, 10];
+        const colWidths = isZonal
+            ? [10, 25, 15, 25, 25, 20, 25, 20, 15, 15, 10, 10]
+            : [10, 15, 25, 25, 20, 25, 20, 15, 15, 10, 10];
+        
         colWidths.forEach((w, idx) => {
             sheet.getColumn(idx + 1).width = w;
         });
 
-        // Add rows manually starting at Row 6
         judgesData[j].forEach((row, index) => {
             const rowIndex = index + 6;
             const dataRow = sheet.getRow(rowIndex);
-            dataRow.values = [
-                row.sino,
-                row.chestNo,
-                row.s1,
-                row.s2,
-                row.s3,
-                row.s4,
-                row.s5,
-                '', // Total
-                '', // Average
-                row.rank,
-                row.points
-            ];
+            
+            if (isZonal) {
+                dataRow.values = [
+                    row.sino,
+                    row.participantName || '',
+                    row.chestNo,
+                    row.s1, row.s2, row.s3, row.s4, row.s5,
+                    '', '',
+                    row.rank,
+                    row.points
+                ];
+                dataRow.getCell(9).value = { formula: `SUM(D${rowIndex}:H${rowIndex})`, result: row.total };
+                dataRow.getCell(10).value = { formula: `I${rowIndex}/5`, result: parseFloat(row.average) };
+            } else {
+                dataRow.values = [
+                    row.sino,
+                    row.chestNo,
+                    row.s1, row.s2, row.s3, row.s4, row.s5,
+                    '', '',
+                    row.rank,
+                    row.points
+                ];
+                dataRow.getCell(8).value = { formula: `SUM(C${rowIndex}:G${rowIndex})`, result: row.total };
+                dataRow.getCell(9).value = { formula: `H${rowIndex}/5`, result: parseFloat(row.average) };
+            }
+            
             dataRow.alignment = { horizontal: 'center' };
-
-            dataRow.getCell(8).value = { formula: `SUM(C${rowIndex}:G${rowIndex})`, result: row.total };
-            dataRow.getCell(9).value = { formula: `H${rowIndex}/5`, result: parseFloat(row.average) };
-
-            applyWinnerHighlight(dataRow, row.rank, 11);
+            applyWinnerHighlight(dataRow, row.rank, headers.length);
         });
 
-        // Add borders to all cells from Row 5 onwards
         sheet.eachRow((row, rowNum) => {
             if (rowNum >= 5) {
                 row.eachCell((cell) => {
                     cell.border = {
-                        top: { style: 'thin' },
-                        left: { style: 'thin' },
-                        bottom: { style: 'thin' },
-                        right: { style: 'thin' }
+                        top: { style: 'thin' }, left: { style: 'thin' },
+                        bottom: { style: 'thin' }, right: { style: 'thin' }
                     };
                 });
             }
@@ -107,8 +110,7 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
     // 2. Generate Consolidated Results Sheet
     const grandSheet = workbook.addWorksheet('Grand Results');
 
-    // Add Event & Category Info at the Top
-    grandSheet.getCell('A1').value = `GRAND LEADERBOARD`;
+    grandSheet.getCell('A1').value = `${systemTitle} - GRAND LEADERBOARD`;
     grandSheet.getCell('A1').font = { name: 'Outfit', size: 14, bold: true };
     
     grandSheet.getCell('A2').value = `Event Name: ${eventName || 'N/A'}`;
@@ -117,22 +119,24 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
     grandSheet.getCell('A3').value = `Category: ${categoryName || 'N/A'}`;
     grandSheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
-    const grandHeaders = [
-        'SI NO', 'CHEST NO', 
-        'Judge 1 Total', 'Judge 2 Total', 'Judge 3 Total', 
-        'Grand Total (150)', 'Average (50)', 'Rank', 'Points'
-    ];
+    const grandHeaders = isZonal
+        ? ['SI NO', 'PARTICIPANT NAME', 'CHEST NO', 'Judge 1 Total', 'Judge 2 Total', 'Judge 3 Total', 'Grand Total (150)', 'Average (50)', 'Rank', 'Points']
+        : ['SI NO', 'CHEST NO', 'Judge 1 Total', 'Judge 2 Total', 'Judge 3 Total', 'Grand Total (150)', 'Average (50)', 'Rank', 'Points'];
+
     const grandHeaderRow = grandSheet.getRow(5);
     grandHeaderRow.values = grandHeaders;
     grandHeaderRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     grandHeaderRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF10B981' } // Green for final leaderboard
+        fgColor: { argb: 'FF10B981' }
     };
     grandHeaderRow.alignment = { horizontal: 'center' };
 
-    const grandColWidths = [10, 15, 15, 15, 15, 20, 18, 10, 10];
+    const grandColWidths = isZonal
+        ? [10, 25, 15, 15, 15, 15, 20, 18, 10, 10]
+        : [10, 15, 15, 15, 15, 20, 18, 10, 10];
+    
     grandColWidths.forEach((w, idx) => {
         grandSheet.getColumn(idx + 1).width = w;
     });
@@ -140,34 +144,42 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
     combinedResultsData.forEach((row, index) => {
         const rowIndex = index + 6;
         const dataRow = grandSheet.getRow(rowIndex);
-        dataRow.values = [
-            row.sino,
-            row.chestNo,
-            row.t1,
-            row.t2,
-            row.t3,
-            '', // Grand Total
-            '', // Average
-            row.rank,
-            row.points
-        ];
+
+        if (isZonal) {
+            dataRow.values = [
+                row.sino,
+                row.participantName || '',
+                row.chestNo,
+                row.t1, row.t2, row.t3,
+                '', '',
+                row.rank,
+                row.points
+            ];
+            dataRow.getCell(7).value = { formula: `SUM(D${rowIndex}:F${rowIndex})`, result: row.grandTotal };
+            dataRow.getCell(8).value = { formula: `G${rowIndex}/3`, result: parseFloat(row.average) };
+        } else {
+            dataRow.values = [
+                row.sino,
+                row.chestNo,
+                row.t1, row.t2, row.t3,
+                '', '',
+                row.rank,
+                row.points
+            ];
+            dataRow.getCell(6).value = { formula: `SUM(C${rowIndex}:E${rowIndex})`, result: row.grandTotal };
+            dataRow.getCell(7).value = { formula: `F${rowIndex}/3`, result: parseFloat(row.average) };
+        }
+
         dataRow.alignment = { horizontal: 'center' };
-
-        dataRow.getCell(6).value = { formula: `SUM(C${rowIndex}:E${rowIndex})`, result: row.grandTotal };
-        dataRow.getCell(7).value = { formula: `F${rowIndex}/3`, result: parseFloat(row.average) };
-
-        applyWinnerHighlight(dataRow, row.rank, 9);
+        applyWinnerHighlight(dataRow, row.rank, grandHeaders.length);
     });
 
-    // Add borders to all cells from Row 5 onwards
     grandSheet.eachRow((row, rowNum) => {
         if (rowNum >= 5) {
             row.eachCell((cell) => {
                 cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
+                    top: { style: 'thin' }, left: { style: 'thin' },
+                    bottom: { style: 'thin' }, right: { style: 'thin' }
                 };
             });
         }
@@ -180,7 +192,7 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'Grand_Finale_Combined_Results.xlsx';
+        a.download = isZonal ? `Zonal_Combined_Results_${eventName || 'Event'}.xlsx` : 'Grand_Finale_Combined_Results.xlsx';
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
@@ -190,12 +202,11 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
     }
 };
 
-export const exportCombinedSheet = async (combinedResultsData, eventName, categoryName) => {
+export const exportCombinedSheet = async (combinedResultsData, eventName, categoryName, isZonal = false) => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Combined');
 
-    // Header info
-    sheet.getCell('A1').value = 'COMBINED RESULTS';
+    sheet.getCell('A1').value = isZonal ? 'ASISC ZONAL COMBINED RESULTS' : 'COMBINED RESULTS';
     sheet.getCell('A1').font = { name: 'Outfit', size: 14, bold: true };
 
     sheet.getCell('A2').value = `Event Name: ${eventName || 'N/A'}`;
@@ -204,29 +215,28 @@ export const exportCombinedSheet = async (combinedResultsData, eventName, catego
     sheet.getCell('A3').value = `Category: ${categoryName || 'N/A'}`;
     sheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
-    // Table headers at Row 5
-    const headers = [
-        'SL No', 'CH No',
-        'Judge 1 (50)', 'Judge 2 (50)', 'Judge 3 (50)',
-        'Total (150)', 'Result'
-    ];
+    const headers = isZonal
+        ? ['SL No', 'Participant Name', 'CH No', 'Judge 1 (50)', 'Judge 2 (50)', 'Judge 3 (50)', 'Total (150)', 'Result']
+        : ['SL No', 'CH No', 'Judge 1 (50)', 'Judge 2 (50)', 'Judge 3 (50)', 'Total (150)', 'Result'];
+
     const headerRow = sheet.getRow(5);
     headerRow.values = headers;
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF10B981' } // Green
+        fgColor: { argb: 'FF10B981' }
     };
     headerRow.alignment = { horizontal: 'center' };
 
-    // Column widths
-    const colWidths = [10, 15, 18, 18, 18, 18, 12];
+    const colWidths = isZonal
+        ? [10, 25, 15, 18, 18, 18, 18, 12]
+        : [10, 15, 18, 18, 18, 18, 12];
+    
     colWidths.forEach((w, idx) => {
         sheet.getColumn(idx + 1).width = w;
     });
 
-    // Data rows
     const ordinalSuffix = (n) => {
         const s = ['th', 'st', 'nd', 'rd'];
         const v = n % 100;
@@ -237,41 +247,48 @@ export const exportCombinedSheet = async (combinedResultsData, eventName, catego
         const rowIndex = index + 6;
         const dataRow = sheet.getRow(rowIndex);
 
-        // Support both manual (j1/j2/j3) and auto (t1/t2/t3) formats
         const judge1 = row.j1 !== undefined ? (parseFloat(row.j1) || 0) : row.t1;
         const judge2 = row.j2 !== undefined ? (parseFloat(row.j2) || 0) : row.t2;
         const judge3 = row.j3 !== undefined ? (parseFloat(row.j3) || 0) : row.t3;
         const grandTotal = judge1 + judge2 + judge3;
 
-        dataRow.values = [
-            row.sino,
-            row.chestNo,
-            judge1,
-            judge2,
-            judge3,
-            '', // Total via formula
-            row.rank ? `${row.rank}${ordinalSuffix(row.rank)}` : ''
-        ];
+        if (isZonal) {
+            dataRow.values = [
+                row.sino,
+                row.participantName || '',
+                row.chestNo,
+                judge1, judge2, judge3,
+                '',
+                row.rank ? `${row.rank}${ordinalSuffix(row.rank)}` : ''
+            ];
+            dataRow.getCell(7).value = {
+                formula: `SUM(D${rowIndex}:F${rowIndex})`,
+                result: grandTotal
+            };
+        } else {
+            dataRow.values = [
+                row.sino,
+                row.chestNo,
+                judge1, judge2, judge3,
+                '',
+                row.rank ? `${row.rank}${ordinalSuffix(row.rank)}` : ''
+            ];
+            dataRow.getCell(6).value = {
+                formula: `SUM(C${rowIndex}:E${rowIndex})`,
+                result: grandTotal
+            };
+        }
+
         dataRow.alignment = { horizontal: 'center' };
-
-        // Total formula: sum of C+D+E
-        dataRow.getCell(6).value = {
-            formula: `SUM(C${rowIndex}:E${rowIndex})`,
-            result: grandTotal
-        };
-
-        applyWinnerHighlight(dataRow, row.rank, 7);
+        applyWinnerHighlight(dataRow, row.rank, headers.length);
     });
 
-    // Borders from Row 5
     sheet.eachRow((row, rowNum) => {
         if (rowNum >= 5) {
             row.eachCell((cell) => {
                 cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
+                    top: { style: 'thin' }, left: { style: 'thin' },
+                    bottom: { style: 'thin' }, right: { style: 'thin' }
                 };
             });
         }
@@ -284,7 +301,7 @@ export const exportCombinedSheet = async (combinedResultsData, eventName, catego
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Combined_Results_${eventName || 'Event'}.xlsx`;
+        a.download = isZonal ? `Zonal_Combined_${eventName || 'Event'}.xlsx` : `Combined_Results_${eventName || 'Event'}.xlsx`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {

@@ -17,7 +17,7 @@ const COMPETITIONS = [
             { name: 'Declamation', categories: ['Sub-Junior', 'Junior', 'Senior'] },
             { name: 'Debate', categories: ['Junior', 'Senior'] },
             { name: 'Prepared Speech', categories: ['Sub-Junior', 'Junior', 'Senior'] },
-            { name: 'Story Telling', categories: ['Only'] },
+            { name: 'Story Telling', categories: ['Sub-Junior'] },
             { name: 'Quiz', categories: ['Sub-Junior', 'Junior', 'Senior'] },
         ],
     },

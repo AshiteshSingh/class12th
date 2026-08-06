@@ -19,7 +19,7 @@ const COMPETITIONS = [
             { name: 'Declamation', categories: ['Sub-Junior', 'Junior', 'Senior'] },
             { name: 'Debate', categories: ['Junior', 'Senior'] },
             { name: 'Prepared Speech', categories: ['Sub-Junior', 'Junior', 'Senior'] },
-            { name: 'Story Telling', categories: ['Only'] },
+            { name: 'Story Telling', categories: ['Sub-Junior'] },
             { name: 'Quiz', categories: ['Sub-Junior', 'Junior', 'Senior'] },
         ],
     },
@@ -256,16 +256,58 @@ export default function ZonalPage() {
     // Collect all assigned participant names across judges for badge feedback
     const assignedNames = judges[1].map(p => p.participantName).filter(Boolean);
 
+    const fillRosterForCategory = (catName) => {
+        let catKey = 'Sub-Junior';
+        if (catName.includes('Junior') && !catName.includes('Sub')) catKey = 'Junior';
+        if (catName.includes('Senior')) catKey = 'Senior';
+        if (catName.includes('Sub')) catKey = 'Sub-Junior';
+
+        const categoryParticipants = ALL_ZONAL_PARTICIPANTS.filter(p => p.categoryShort === catKey);
+
+        setJudges(prev => {
+            const next = { ...prev };
+            for (let j = 1; j <= 3; j++) {
+                for (let i = 0; i < NUM_PARTICIPANTS; i++) {
+                    const p = next[j][i];
+                    if (categoryParticipants[i]) {
+                        p.participantName = categoryParticipants[i].name;
+                        p.chestNo = `C${i + 1}`;
+                    } else {
+                        p.participantName = '';
+                        p.chestNo = '';
+                        p.s1 = 0; p.s1Str = '';
+                        p.s2 = 0; p.s2Str = '';
+                        p.s3 = 0; p.s3Str = '';
+                        p.s4 = 0; p.s4Str = '';
+                        p.s5 = 0; p.s5Str = '';
+                        p.total = 0;
+                        p.average = 0;
+                    }
+                }
+            }
+            return next;
+        });
+    };
+
     const handleEventSelect = (name, cats) => {
         setEventName(name);
         setAvailableCategories(cats);
-        setSelectedCategories(cats.length === 1 ? [...cats] : []);
+        const initialCats = cats.length === 1 ? [...cats] : [];
+        setSelectedCategories(initialCats);
+
+        if (initialCats.length > 0) {
+            fillRosterForCategory(initialCats[0]);
+        }
     };
 
     const handleCategoryToggle = (cat) => {
-        setSelectedCategories(prev =>
-            prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-        );
+        setSelectedCategories(prev => {
+            const next = prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat];
+            if (next.length > 0) {
+                fillRosterForCategory(next[0]);
+            }
+            return next;
+        });
     };
 
     const handleOpenModal = (index) => {
@@ -288,7 +330,6 @@ export default function ZonalPage() {
     // ── Ascending Sort by Chest Number ──────────────────────────────────────────
     const sortByChestNumber = () => {
         setJudges(prev => {
-            // Build index array sorted by chest number extracted from Judge 1
             const indices = Array.from({ length: NUM_PARTICIPANTS }, (_, i) => i);
             indices.sort((a, b) => {
                 const chestA = parseChestNumber(prev[1][a].chestNo);
@@ -307,7 +348,6 @@ export default function ZonalPage() {
             return next;
         });
 
-        // Also sort manual combined rows by chest number
         setManualRows(prev => {
             const sorted = [...prev].sort((a, b) => {
                 const chestA = parseChestNumber(a.chestNo);
@@ -360,31 +400,43 @@ export default function ZonalPage() {
     };
 
     const fillDemoData = () => {
-        setEventName('ASISC Zonal Story Telling');
-        setAvailableCategories(['Sub-Junior', 'Junior', 'Senior']);
-        setSelectedCategories(['Senior']);
+        setEventName('Story Telling');
+        setAvailableCategories(['Sub-Junior']);
+        setSelectedCategories(['Sub-Junior']);
 
         setJudges(prev => {
             const next = { ...prev };
-            const sampleParticipants = ALL_ZONAL_PARTICIPANTS.filter(p => p.categoryShort === 'Senior').slice(0, NUM_PARTICIPANTS);
+            const subJuniorParticipants = ALL_ZONAL_PARTICIPANTS.filter(p => p.categoryShort === 'Sub-Junior');
 
             for (let j = 1; j <= 3; j++) {
                 for (let i = 0; i < NUM_PARTICIPANTS; i++) {
                     const p = next[j][i];
-                    p.participantName = sampleParticipants[i] ? sampleParticipants[i].name : `Student ${i + 1}`;
-                    p.chestNo = `C${101 + i}`;
-                    p.s1 = Math.floor(Math.random() * 5) + 6;
-                    p.s1Str = String(p.s1);
-                    p.s2 = Math.floor(Math.random() * 5) + 6;
-                    p.s2Str = String(p.s2);
-                    p.s3 = Math.floor(Math.random() * 5) + 6;
-                    p.s3Str = String(p.s3);
-                    p.s4 = Math.floor(Math.random() * 5) + 6;
-                    p.s4Str = String(p.s4);
-                    p.s5 = Math.floor(Math.random() * 5) + 6;
-                    p.s5Str = String(p.s5);
-                    p.total = p.s1 + p.s2 + p.s3 + p.s4 + p.s5;
-                    p.average = (p.total / 5).toFixed(2);
+                    if (subJuniorParticipants[i]) {
+                        p.participantName = subJuniorParticipants[i].name;
+                        p.chestNo = `C${i + 1}`;
+                        p.s1 = Math.floor(Math.random() * 4) + 7;
+                        p.s1Str = String(p.s1);
+                        p.s2 = Math.floor(Math.random() * 4) + 7;
+                        p.s2Str = String(p.s2);
+                        p.s3 = Math.floor(Math.random() * 4) + 7;
+                        p.s3Str = String(p.s3);
+                        p.s4 = Math.floor(Math.random() * 4) + 7;
+                        p.s4Str = String(p.s4);
+                        p.s5 = Math.floor(Math.random() * 4) + 7;
+                        p.s5Str = String(p.s5);
+                        p.total = p.s1 + p.s2 + p.s3 + p.s4 + p.s5;
+                        p.average = (p.total / 5).toFixed(2);
+                    } else {
+                        p.participantName = '';
+                        p.chestNo = '';
+                        p.s1 = 0; p.s1Str = '';
+                        p.s2 = 0; p.s2Str = '';
+                        p.s3 = 0; p.s3Str = '';
+                        p.s4 = 0; p.s4Str = '';
+                        p.s5 = 0; p.s5Str = '';
+                        p.total = 0;
+                        p.average = 0;
+                    }
                 }
             }
             return next;
@@ -442,7 +494,10 @@ export default function ZonalPage() {
         }
 
         for (let i = 0; i < NUM_PARTICIPANTS; i++) {
-            const participantName = judgesData[1][i].participantName || `Student ${i + 1}`;
+            const participantName = judgesData[1][i].participantName;
+            if (!participantName && judgesData[1][i].total === 0) continue;
+
+            const nameToUse = participantName || `Student ${i + 1}`;
             const chestNo = judgesData[1][i].chestNo || `C${i + 1}`;
             const t1 = judgesData[1][i].total;
             const t2 = judgesData[2][i].total;
@@ -450,7 +505,7 @@ export default function ZonalPage() {
             const grandTotal = t1 + t2 + t3;
             const average = grandTotal / 3;
             combined.push({
-                sino: i + 1, participantName, chestNo, t1, t2, t3, grandTotal,
+                sino: i + 1, participantName: nameToUse, chestNo, t1, t2, t3, grandTotal,
                 average: average.toFixed(2), rank: null, points: 0
             });
         }
@@ -647,6 +702,13 @@ export default function ZonalPage() {
                 <div className="meta-field" style={{ flex: '0 0 auto', display: 'flex', gap: '0.6rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                     <button
                         className="btn secondary"
+                        onClick={() => selectedCategories.length > 0 && fillRosterForCategory(selectedCategories[0])}
+                        style={{ background: '#7c3aed', boxShadow: '0 4px 15px rgba(124,58,237,0.4)', minWidth: '150px' }}
+                    >
+                        👥 Fill Roster
+                    </button>
+                    <button
+                        className="btn secondary"
                         onClick={sortByChestNumber}
                         style={{ background: '#3b82f6', boxShadow: '0 4px 15px rgba(59,130,246,0.4)', minWidth: '150px' }}
                     >
@@ -655,7 +717,7 @@ export default function ZonalPage() {
                     <button
                         className="btn secondary"
                         onClick={autoAssignChestNos}
-                        style={{ background: '#059669', boxShadow: '0 4px 15px rgba(5,150,105,0.4)', minWidth: '150px' }}
+                        style={{ background: '#059669', boxShadow: '0 4px 15px rgba(5,150,105,0.4)', minWidth: '130px' }}
                     >
                         ⚡ Auto C1..C13
                     </button>
@@ -664,7 +726,7 @@ export default function ZonalPage() {
                         onClick={fillDemoData}
                         style={{ background: '#6366f1', boxShadow: '0 4px 15px rgba(99,102,241,0.4)', minWidth: '130px' }}
                     >
-                        Fill Demo
+                        Fill Demo Data
                     </button>
                     <button
                         className="btn secondary"

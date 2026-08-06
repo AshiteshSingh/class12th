@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { ZONAL_PARTICIPANTS } from './participants';
+import { ZONAL_PARTICIPANTS, getCriteriaForEvent } from './participants';
 
 const EXCEL_HIGHLIGHTS = {
     1: { fill: 'FFFFD700', font: 'FF000000' }, // Gold (Yellow)
@@ -30,7 +30,6 @@ function resolveEventAndCategory(eventName, categoryName, rowsData = [], isZonal
     let finalCategoryName = categoryName && categoryName.trim() ? categoryName.trim() : '';
 
     if (!finalCategoryName && isZonal && Array.isArray(rowsData)) {
-        // Try to infer category from participant names
         const names = rowsData.map(r => r.participantName || r.name || '').filter(Boolean);
         const subJuniorNames = ZONAL_PARTICIPANTS['Sub-Junior Category'] || [];
         const juniorNames = ZONAL_PARTICIPANTS['Junior Category'] || [];
@@ -59,11 +58,25 @@ function resolveEventAndCategory(eventName, categoryName, rowsData = [], isZonal
     return { finalEventName, finalCategoryName };
 }
 
+// Convert 1-based column index to Excel column letter (1 -> A, 4 -> D, 8 -> H)
+function getColLetter(colIdx) {
+    let temp = '';
+    let letter = '';
+    while (colIdx > 0) {
+        temp = (colIdx - 1) % 26;
+        letter = String.fromCharCode(65 + temp) + letter;
+        colIdx = (colIdx - temp - 1) / 26;
+    }
+    return letter;
+}
+
 export const exportCombinedReport = async (judgesData, combinedResultsData, eventName, categoryName, isZonal = false) => {
     const workbook = new ExcelJS.Workbook();
     const systemTitle = isZonal ? 'ASISC ZONAL JUDGING SYSTEM' : 'GRAND FINALE JUDGING SYSTEM';
 
     const { finalEventName, finalCategoryName } = resolveEventAndCategory(eventName, categoryName, combinedResultsData, isZonal);
+    const activeCriteria = getCriteriaForEvent(finalEventName);
+    const criteriaHeaders = activeCriteria.map(c => `${c.label} (${c.max})`);
 
     // 1. Generate Judge Sheets
     for (let j = 1; j <= 3; j++) {
@@ -79,8 +92,8 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         sheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
         const headers = isZonal
-            ? ['SI NO', 'PARTICIPANT NAME', 'CHEST NO', 'Pronunciation Clarity (10)', 'Voice Modulation (10)', 'Confidence (10)', 'Overall Impact (10)', 'Effectiveness (10)', 'Total (50)', 'Average (10)', 'Rank', 'Points']
-            : ['SI NO', 'CHEST NO', 'Pronunciation Clarity (10)', 'Voice Modulation (10)', 'Confidence (10)', 'Overall Impact (10)', 'Effectiveness (10)', 'Total (50)', 'Average (10)', 'Rank', 'Points'];
+            ? ['SI NO', 'PARTICIPANT NAME', 'CHEST NO', ...criteriaHeaders, 'Total (50)', 'Average (10)', 'Rank', 'Points']
+            : ['SI NO', 'CHEST NO', ...criteriaHeaders, 'Total (50)', 'Average (10)', 'Rank', 'Points'];
 
         const headerRow = sheet.getRow(5);
         headerRow.values = headers;
@@ -92,42 +105,52 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         };
         headerRow.alignment = { horizontal: 'center' };
 
-        const colWidths = isZonal
-            ? [10, 25, 15, 25, 25, 20, 25, 20, 15, 15, 10, 10]
-            : [10, 15, 25, 25, 20, 25, 20, 15, 15, 10, 10];
-        
-        colWidths.forEach((w, idx) => {
-            sheet.getColumn(idx + 1).width = w;
+        // Calculate dynamic column positions
+        const criteriaStartCol = isZonal ? 4 : 3;
+        const criteriaEndCol = criteriaStartCol + activeCriteria.length - 1;
+        const totalColIdx = criteriaEndCol + 1;
+        const avgColIdx = totalColIdx + 1;
+        const rankColIdx = avgColIdx + 1;
+        const pointsColIdx = rankColIdx + 1;
+
+        headers.forEach((_, idx) => {
+            const width = (idx === 1 && isZonal) ? 25 : (idx >= criteriaStartCol - 1 && idx <= criteriaEndCol - 1 ? 25 : 15);
+            sheet.getColumn(idx + 1).width = width;
         });
 
         judgesData[j].forEach((row, index) => {
             const rowIndex = index + 6;
             const dataRow = sheet.getRow(rowIndex);
             
+            const scoreValues = activeCriteria.map(c => row[c.key] || 0);
+
             if (isZonal) {
                 dataRow.values = [
                     row.sino,
                     row.participantName || '',
                     row.chestNo,
-                    row.s1, row.s2, row.s3, row.s4, row.s5,
+                    ...scoreValues,
                     '', '',
                     row.rank,
                     row.points
                 ];
-                dataRow.getCell(9).value = { formula: `SUM(D${rowIndex}:H${rowIndex})`, result: row.total };
-                dataRow.getCell(10).value = { formula: `I${rowIndex}/5`, result: parseFloat(row.average) };
             } else {
                 dataRow.values = [
                     row.sino,
                     row.chestNo,
-                    row.s1, row.s2, row.s3, row.s4, row.s5,
+                    ...scoreValues,
                     '', '',
                     row.rank,
                     row.points
                 ];
-                dataRow.getCell(8).value = { formula: `SUM(C${rowIndex}:G${rowIndex})`, result: row.total };
-                dataRow.getCell(9).value = { formula: `H${rowIndex}/5`, result: parseFloat(row.average) };
             }
+
+            const startLetter = getColLetter(criteriaStartCol);
+            const endLetter = getColLetter(criteriaEndCol);
+            const totalLetter = getColLetter(totalColIdx);
+
+            dataRow.getCell(totalColIdx).value = { formula: `SUM(${startLetter}${rowIndex}:${endLetter}${rowIndex})`, result: row.total };
+            dataRow.getCell(avgColIdx).value = { formula: `${totalLetter}${rowIndex}/5`, result: parseFloat(row.average) };
             
             dataRow.alignment = { horizontal: 'center' };
             applyWinnerHighlight(dataRow, row.rank, headers.length);

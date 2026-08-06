@@ -44,3 +44,26 @@ export const ALL_ZONAL_PARTICIPANTS = [
     ...ZONAL_PARTICIPANTS['Junior Category'].map((name, i) => ({ id: `jr-${i+1}`, name, category: 'Junior Category', categoryShort: 'Junior' })),
     ...ZONAL_PARTICIPANTS['Sub-Junior Category'].map((name, i) => ({ id: `subjr-${i+1}`, name, category: 'Sub-Junior Category', categoryShort: 'Sub-Junior' }))
 ];
+
+export const DEFAULT_CRITERIA = [
+    { key: 's1', label: 'Pronunciation Clarity', max: 10 },
+    { key: 's2', label: 'Voice Modulation', max: 10 },
+    { key: 's3', label: 'Confidence', max: 10 },
+    { key: 's4', label: 'Overall Impact', max: 10 },
+    { key: 's5', label: 'Effectiveness', max: 10 },
+];
+
+export const EVENT_CRITERIA = {
+    'Debate': [
+        { key: 's1', label: 'Content', max: 20 },
+        { key: 's2', label: 'Delivery (Style, Fluency, Clarity, Poise)', max: 20 },
+        { key: 's3', label: 'Rebuttal', max: 5 },
+        { key: 's4', label: 'Overall Impact', max: 5 },
+    ],
+};
+
+export const getCriteriaForEvent = (eventName) => {
+    if (!eventName) return DEFAULT_CRITERIA;
+    const key = Object.keys(EVENT_CRITERIA).find(k => eventName.toLowerCase().includes(k.toLowerCase()));
+    return key ? EVENT_CRITERIA[key] : DEFAULT_CRITERIA;
+};

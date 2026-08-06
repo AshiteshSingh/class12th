@@ -5,7 +5,7 @@ import Link from 'next/link';
 import ZonalJudgeTable from '../../components/ZonalJudgeTable';
 import ParticipantModal from '../../components/ParticipantModal';
 import { exportCombinedReport, exportCombinedSheet } from '../../utils/exportExcel';
-import { ALL_ZONAL_PARTICIPANTS } from '../../utils/participants';
+import { ALL_ZONAL_PARTICIPANTS, getCriteriaForEvent } from '../../utils/participants';
 
 const NUM_PARTICIPANTS = 13;
 const SCORE_MAX = 10;
@@ -459,10 +459,14 @@ export default function ZonalPage() {
         });
     };
 
-    const handleScoreChange = (judgeId, participantIndex, field, value) => {
+    const handleScoreChange = (judgeId, participantIndex, field, value, maxAllowed) => {
+        const criteriaList = getCriteriaForEvent(eventName);
+        const criterion = criteriaList.find(c => c.key === field);
+        const limit = maxAllowed !== undefined ? maxAllowed : (criterion ? criterion.max : 10);
+
         let numericValue = parseFloat(value);
         if (isNaN(numericValue)) numericValue = 0;
-        if (numericValue > SCORE_MAX) numericValue = SCORE_MAX;
+        if (numericValue > limit) numericValue = limit;
         if (numericValue < 0) numericValue = 0;
 
         setJudges(prev => {
@@ -470,7 +474,7 @@ export default function ZonalPage() {
             next[judgeId][participantIndex][field] = numericValue;
             next[judgeId][participantIndex][`${field}Str`] = value;
             const p = next[judgeId][participantIndex];
-            p.total = p.s1 + p.s2 + p.s3 + p.s4 + p.s5;
+            p.total = criteriaList.reduce((sum, c) => sum + (p[c.key] || 0), 0);
             p.average = (p.total / 5).toFixed(2);
             return next;
         });
@@ -780,10 +784,11 @@ export default function ZonalPage() {
                         <ZonalJudgeTable
                             judgeId={1}
                             participants={judges[1]}
-                            onScoreChange={(idx, field, val) => handleScoreChange(1, idx, field, val)}
+                            onScoreChange={(idx, field, val, maxVal) => handleScoreChange(1, idx, field, val, maxVal)}
                             onChestChange={handleChestChange}
                             onNameClick={handleOpenModal}
                             onSortByChestNo={sortByChestNumber}
+                            criteria={getCriteriaForEvent(eventName)}
                         />
                     </section>
                 )}
@@ -792,10 +797,11 @@ export default function ZonalPage() {
                         <ZonalJudgeTable
                             judgeId={2}
                             participants={judges[2]}
-                            onScoreChange={(idx, field, val) => handleScoreChange(2, idx, field, val)}
+                            onScoreChange={(idx, field, val, maxVal) => handleScoreChange(2, idx, field, val, maxVal)}
                             onChestChange={handleChestChange}
                             onNameClick={handleOpenModal}
                             onSortByChestNo={sortByChestNumber}
+                            criteria={getCriteriaForEvent(eventName)}
                         />
                     </section>
                 )}
@@ -804,10 +810,11 @@ export default function ZonalPage() {
                         <ZonalJudgeTable
                             judgeId={3}
                             participants={judges[3]}
-                            onScoreChange={(idx, field, val) => handleScoreChange(3, idx, field, val)}
+                            onScoreChange={(idx, field, val, maxVal) => handleScoreChange(3, idx, field, val, maxVal)}
                             onChestChange={handleChestChange}
                             onNameClick={handleOpenModal}
                             onSortByChestNo={sortByChestNumber}
+                            criteria={getCriteriaForEvent(eventName)}
                         />
                     </section>
                 )}

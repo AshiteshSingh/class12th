@@ -1,6 +1,10 @@
 'use client';
 
-export default function JudgeTable({ judgeId, participants, onScoreChange, onChestChange }) {
+import { DEFAULT_CRITERIA } from '../utils/participants';
+
+export default function JudgeTable({ judgeId, participants, onScoreChange, onChestChange, criteria }) {
+    const activeCriteria = criteria && criteria.length > 0 ? criteria : DEFAULT_CRITERIA;
+
     return (
         <div className="table-wrapper">
             <h2>Judge {judgeId} Scores</h2>
@@ -9,17 +13,15 @@ export default function JudgeTable({ judgeId, participants, onScoreChange, onChe
                     <tr>
                         <th>SI NO</th>
                         <th>CHEST NO</th>
-                        <th>Pronunciation Clarity (10)</th>
-                        <th>Voice Modulation (10)</th>
-                        <th>Confidence (10)</th>
-                        <th>Overall Impact (10)</th>
-                        <th>Effectiveness (10)</th>
+                        {activeCriteria.map((c, idx) => (
+                            <th key={idx}>{c.label} ({c.max})</th>
+                        ))}
                         <th>TOTAL (50)</th>
                     </tr>
                 </thead>
                 <tbody>
                     {participants.map((p, index) => {
-                        const total = (p.s1 || 0) + (p.s2 || 0) + (p.s3 || 0) + (p.s4 || 0) + (p.s5 || 0);
+                        const total = activeCriteria.reduce((sum, c) => sum + (p[c.key] || 0), 0);
                         return (
                             <tr key={index}>
                                 <td>{index + 1}</td>
@@ -32,21 +34,18 @@ export default function JudgeTable({ judgeId, participants, onScoreChange, onChe
                                         onChange={(e) => onChestChange(index, e.target.value)}
                                     />
                                 </td>
-                                <td>
-                                    <input type="number" min="0" max="10" className="score-input p-clarity" value={p.s1 === 0 && p.s1Str === '' ? '' : p.s1} onChange={(e) => onScoreChange(index, 's1', e.target.value)} />
-                                </td>
-                                <td>
-                                    <input type="number" min="0" max="10" className="score-input v-mod" value={p.s2 === 0 && p.s2Str === '' ? '' : p.s2} onChange={(e) => onScoreChange(index, 's2', e.target.value)} />
-                                </td>
-                                <td>
-                                    <input type="number" min="0" max="10" className="score-input conf" value={p.s3 === 0 && p.s3Str === '' ? '' : p.s3} onChange={(e) => onScoreChange(index, 's3', e.target.value)} />
-                                </td>
-                                <td>
-                                    <input type="number" min="0" max="10" className="score-input o-impact" value={p.s4 === 0 && p.s4Str === '' ? '' : p.s4} onChange={(e) => onScoreChange(index, 's4', e.target.value)} />
-                                </td>
-                                <td>
-                                    <input type="number" min="0" max="10" className="score-input e-deliv" value={p.s5 === 0 && p.s5Str === '' ? '' : p.s5} onChange={(e) => onScoreChange(index, 's5', e.target.value)} />
-                                </td>
+                                {activeCriteria.map((c, cIdx) => (
+                                    <td key={cIdx}>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max={c.max}
+                                            className="score-input"
+                                            value={p[c.key] === 0 && p[`${c.key}Str`] === '' ? '' : p[c.key]}
+                                            onChange={(e) => onScoreChange(index, c.key, e.target.value, c.max)}
+                                        />
+                                    </td>
+                                ))}
                                 <td className="total-cell">{total}</td>
                             </tr>
                         );

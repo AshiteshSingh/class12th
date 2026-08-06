@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { ZONAL_PARTICIPANTS } from './participants';
 
 const EXCEL_HIGHLIGHTS = {
     1: { fill: 'FFFFD700', font: 'FF000000' }, // Gold (Yellow)
@@ -23,9 +24,46 @@ function applyWinnerHighlight(excelRow, rank, maxCols = 11) {
     }
 }
 
+// Helper to infer Category if not explicitly provided
+function resolveEventAndCategory(eventName, categoryName, rowsData = [], isZonal = false) {
+    let finalEventName = eventName && eventName.trim() ? eventName.trim() : (isZonal ? 'ASISC Zonal Competition' : 'Grand Finale Competition');
+    let finalCategoryName = categoryName && categoryName.trim() ? categoryName.trim() : '';
+
+    if (!finalCategoryName && isZonal && Array.isArray(rowsData)) {
+        // Try to infer category from participant names
+        const names = rowsData.map(r => r.participantName || r.name || '').filter(Boolean);
+        const subJuniorNames = ZONAL_PARTICIPANTS['Sub-Junior Category'] || [];
+        const juniorNames = ZONAL_PARTICIPANTS['Junior Category'] || [];
+        const seniorNames = ZONAL_PARTICIPANTS['Senior Category'] || [];
+
+        let subJrCount = 0, jrCount = 0, srCount = 0;
+        names.forEach(n => {
+            if (subJuniorNames.includes(n)) subJrCount++;
+            if (juniorNames.includes(n)) jrCount++;
+            if (seniorNames.includes(n)) srCount++;
+        });
+
+        if (subJrCount > 0 && subJrCount >= jrCount && subJrCount >= srCount) {
+            finalCategoryName = 'Sub-Junior';
+        } else if (jrCount > 0 && jrCount >= srCount) {
+            finalCategoryName = 'Junior';
+        } else if (srCount > 0) {
+            finalCategoryName = 'Senior';
+        }
+    }
+
+    if (!finalCategoryName) {
+        finalCategoryName = isZonal ? 'Zonal Category' : 'General Category';
+    }
+
+    return { finalEventName, finalCategoryName };
+}
+
 export const exportCombinedReport = async (judgesData, combinedResultsData, eventName, categoryName, isZonal = false) => {
     const workbook = new ExcelJS.Workbook();
     const systemTitle = isZonal ? 'ASISC ZONAL JUDGING SYSTEM' : 'GRAND FINALE JUDGING SYSTEM';
+
+    const { finalEventName, finalCategoryName } = resolveEventAndCategory(eventName, categoryName, combinedResultsData, isZonal);
 
     // 1. Generate Judge Sheets
     for (let j = 1; j <= 3; j++) {
@@ -34,10 +72,10 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         sheet.getCell('A1').value = `${systemTitle} - JUDGE ${j}`;
         sheet.getCell('A1').font = { name: 'Outfit', size: 14, bold: true };
         
-        sheet.getCell('A2').value = `Event Name: ${eventName || 'N/A'}`;
+        sheet.getCell('A2').value = `Event Name: ${finalEventName}`;
         sheet.getCell('A2').font = { name: 'Outfit', size: 11, bold: true };
         
-        sheet.getCell('A3').value = `Category: ${categoryName || 'N/A'}`;
+        sheet.getCell('A3').value = `Category: ${finalCategoryName}`;
         sheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
         const headers = isZonal
@@ -113,10 +151,10 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
     grandSheet.getCell('A1').value = `${systemTitle} - GRAND LEADERBOARD`;
     grandSheet.getCell('A1').font = { name: 'Outfit', size: 14, bold: true };
     
-    grandSheet.getCell('A2').value = `Event Name: ${eventName || 'N/A'}`;
+    grandSheet.getCell('A2').value = `Event Name: ${finalEventName}`;
     grandSheet.getCell('A2').font = { name: 'Outfit', size: 11, bold: true };
     
-    grandSheet.getCell('A3').value = `Category: ${categoryName || 'N/A'}`;
+    grandSheet.getCell('A3').value = `Category: ${finalCategoryName}`;
     grandSheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
     const grandHeaders = isZonal
@@ -192,7 +230,8 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = isZonal ? `Zonal_Combined_Results_${eventName || 'Event'}.xlsx` : 'Grand_Finale_Combined_Results.xlsx';
+        const sanitizedEvent = finalEventName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        a.download = isZonal ? `Zonal_Combined_Results_${sanitizedEvent}.xlsx` : `Grand_Finale_Combined_Results_${sanitizedEvent}.xlsx`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
@@ -206,13 +245,15 @@ export const exportCombinedSheet = async (combinedResultsData, eventName, catego
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Combined');
 
+    const { finalEventName, finalCategoryName } = resolveEventAndCategory(eventName, categoryName, combinedResultsData, isZonal);
+
     sheet.getCell('A1').value = isZonal ? 'ASISC ZONAL COMBINED RESULTS' : 'COMBINED RESULTS';
     sheet.getCell('A1').font = { name: 'Outfit', size: 14, bold: true };
 
-    sheet.getCell('A2').value = `Event Name: ${eventName || 'N/A'}`;
+    sheet.getCell('A2').value = `Event Name: ${finalEventName}`;
     sheet.getCell('A2').font = { name: 'Outfit', size: 11, bold: true };
 
-    sheet.getCell('A3').value = `Category: ${categoryName || 'N/A'}`;
+    sheet.getCell('A3').value = `Category: ${finalCategoryName}`;
     sheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
     const headers = isZonal
@@ -301,7 +342,8 @@ export const exportCombinedSheet = async (combinedResultsData, eventName, catego
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = isZonal ? `Zonal_Combined_${eventName || 'Event'}.xlsx` : `Combined_Results_${eventName || 'Event'}.xlsx`;
+        const sanitizedEvent = finalEventName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        a.download = isZonal ? `Zonal_Combined_${sanitizedEvent}.xlsx` : `Combined_Results_${sanitizedEvent}.xlsx`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {

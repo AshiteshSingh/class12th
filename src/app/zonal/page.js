@@ -246,9 +246,9 @@ export default function ZonalPage() {
 
     const [combinedResults, setCombinedResults] = useState([]);
     const [showResults, setShowResults] = useState(false);
-    const [eventName, setEventName] = useState('');
-    const [availableCategories, setAvailableCategories] = useState([]);
-    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [eventName, setEventName] = useState('Story Telling');
+    const [availableCategories, setAvailableCategories] = useState(['Sub-Junior']);
+    const [selectedCategories, setSelectedCategories] = useState(['Sub-Junior']);
     const [eventType, setEventType] = useState('individual');
 
     const categoryName = selectedCategories.join(', ');
@@ -288,6 +288,10 @@ export default function ZonalPage() {
             return next;
         });
     };
+
+    useEffect(() => {
+        fillRosterForCategory('Sub-Junior');
+    }, []);
 
     const handleEventSelect = (name, cats) => {
         setEventName(name);

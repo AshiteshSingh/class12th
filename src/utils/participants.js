@@ -60,6 +60,13 @@ export const EVENT_CRITERIA = {
         { key: 's3', label: 'Rebuttal', max: 5 },
         { key: 's4', label: 'Overall Impact', max: 5 },
     ],
+    'Story Telling': [
+        { key: 's1', label: 'Language Clarity & Pronunciation', max: 10 },
+        { key: 's2', label: 'Intonation and voice modulation', max: 10 },
+        { key: 's3', label: 'Fluency and confidence', max: 10 },
+        { key: 's4', label: 'Memorisation and expression', max: 10 },
+        { key: 's5', label: 'Moral of the story', max: 10 },
+    ],
 };
 
 export const getCriteriaForEvent = (eventName) => {

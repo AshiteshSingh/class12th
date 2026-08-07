@@ -92,7 +92,7 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         sheet.getCell('A3').font = { name: 'Outfit', size: 11, bold: true };
 
         const headers = isZonal
-            ? ['SI NO', 'PARTICIPANT NAME', 'CHEST NO', ...criteriaHeaders, 'Total (50)', 'Average (10)', 'Rank', 'Points']
+            ? ['SI NO', 'PARTICIPANT NAME', 'CHEST NO', ...criteriaHeaders, 'Total (50)']
             : ['SI NO', 'CHEST NO', ...criteriaHeaders, 'Total (50)', 'Average (10)', 'Rank', 'Points'];
 
         const headerRow = sheet.getRow(5);
@@ -109,9 +109,9 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
         const criteriaStartCol = isZonal ? 4 : 3;
         const criteriaEndCol = criteriaStartCol + activeCriteria.length - 1;
         const totalColIdx = criteriaEndCol + 1;
-        const avgColIdx = totalColIdx + 1;
-        const rankColIdx = avgColIdx + 1;
-        const pointsColIdx = rankColIdx + 1;
+        const avgColIdx = isZonal ? null : totalColIdx + 1;
+        const rankColIdx = isZonal ? null : totalColIdx + 2;
+        const pointsColIdx = isZonal ? null : totalColIdx + 3;
 
         headers.forEach((_, idx) => {
             const width = (idx === 1 && isZonal) ? 25 : (idx >= criteriaStartCol - 1 && idx <= criteriaEndCol - 1 ? 25 : 15);
@@ -130,9 +130,7 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
                     row.participantName || '',
                     row.chestNo,
                     ...scoreValues,
-                    '', '',
-                    row.rank,
-                    row.points
+                    ''
                 ];
             } else {
                 dataRow.values = [
@@ -150,10 +148,13 @@ export const exportCombinedReport = async (judgesData, combinedResultsData, even
             const totalLetter = getColLetter(totalColIdx);
 
             dataRow.getCell(totalColIdx).value = { formula: `SUM(${startLetter}${rowIndex}:${endLetter}${rowIndex})`, result: row.total };
-            dataRow.getCell(avgColIdx).value = { formula: `${totalLetter}${rowIndex}/5`, result: parseFloat(row.average) };
+            
+            if (!isZonal) {
+                dataRow.getCell(avgColIdx).value = { formula: `${totalLetter}${rowIndex}/5`, result: parseFloat(row.average) };
+                applyWinnerHighlight(dataRow, row.rank, headers.length);
+            }
             
             dataRow.alignment = { horizontal: 'center' };
-            applyWinnerHighlight(dataRow, row.rank, headers.length);
         });
 
         sheet.eachRow((row, rowNum) => {

@@ -410,13 +410,14 @@ export default function ZonalPage() {
 
         setJudges(prev => {
             const next = { ...prev };
-            const subJuniorParticipants = ALL_ZONAL_PARTICIPANTS.filter(p => p.categoryShort === 'Sub-Junior');
+            // Pick first 13 participants from ALL_ZONAL_PARTICIPANTS to ensure full table
+            const demoParticipants = ALL_ZONAL_PARTICIPANTS.slice(0, NUM_PARTICIPANTS);
 
             for (let j = 1; j <= 3; j++) {
                 for (let i = 0; i < NUM_PARTICIPANTS; i++) {
                     const p = next[j][i];
-                    if (subJuniorParticipants[i]) {
-                        p.participantName = subJuniorParticipants[i].name;
+                    if (demoParticipants[i]) {
+                        p.participantName = demoParticipants[i].name;
                         p.chestNo = `C${i + 1}`;
                         p.s1 = Math.floor(Math.random() * 4) + 7;
                         p.s1Str = String(p.s1);
